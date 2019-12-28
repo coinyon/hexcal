@@ -22,6 +22,10 @@
   color: #61dafb;
 }
 
+.App-link img {
+  vertical-align: top;
+}
+
 .App-button {
   border-color: #61dafb;
   border-width: 2px;

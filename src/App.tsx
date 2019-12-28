@@ -1,5 +1,6 @@
 import React from 'react';
 import logo from './logo.png';
+import hexagon from './hexagon.svg';
 import './App.css';
 import Web3 from 'web3';
 import { useWeb3React } from '@web3-react/core'
@@ -9,8 +10,9 @@ import moment from 'moment';
 import ical from 'ical-generator';
 
 const injected = new InjectedConnector({ supportedChainIds: [1] })
-const referalAddr = '0x0000000000000000000000000000000000000000'
-const iCalDomain = 'github.com'
+const referalAddr = '0xFa2C0AbdaeDc8099887914Ab25AD11B3846655B9'
+const iCalDomain = 'coinyon.github.io'
+const iCalProdId = '//' + iCalDomain + '/hexcal/ical-generator//EN'
 
 interface Stake {
   stakeId: number;
@@ -57,7 +59,7 @@ const App: React.FC = (_props) => {
   const downloadIcal = () => {
     const calendar = ical({
       domain: iCalDomain,
-      prodId: '//superman-industries.com//ical-generator//EN',
+      prodId: iCalProdId,
       events: stakes.map((stake) => {
         const unlockMoment = momentForDay(stake.lockedDay + stake.stakedDays);
         return {
@@ -124,7 +126,7 @@ const App: React.FC = (_props) => {
         <h2>HEXCAL</h2>
         <h4>Do not miss your unlock days</h4>
         <p>
-        HEXCAL allows you to store your <a className="App-link" href={"https://go.hex.win/?r=" + referalAddr} target='_blank'>HEX</a> unlock days in your calendar.
+        HEXCAL allows you to add the unlock days of your <a className="App-link" href={"https://go.hex.win/?r=" + referalAddr} target='_blank'>HEX</a> stakes to your calendar.
         <br />Download an iCAL/ICS file and import it into your calendar app.
         </p>
         {!active ?
@@ -161,11 +163,10 @@ const App: React.FC = (_props) => {
         {" "}
         <a
           className="App-link"
-          href="https://reactjs.org"
           target="_blank"
-          rel="noopener noreferrer"
+          href={"https://go.hex.win/?r=" + referalAddr}
         >
-          HEX
+          <img src={hexagon} height="17em" width="17em" />
         </a>
         {" "}
         by
