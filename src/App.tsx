@@ -6,8 +6,11 @@ import { useWeb3React } from '@web3-react/core'
 import { InjectedConnector } from '@web3-react/injected-connector'
 import * as HEX from './Hex';
 import moment from 'moment';
+import ical from 'ical-generator';
 
-const injected = new InjectedConnector({ supportedChainIds: [1, 3, 4, 5, 42] })
+const injected = new InjectedConnector({ supportedChainIds: [1] })
+const referalAddr = '0x0000000000000000000000000000000000000000'
+const iCalDomain = 'github.com'
 
 interface Stake {
   stakeId: number;
@@ -23,7 +26,11 @@ const momentForDay = (day: number): moment.Moment => {
   return moment("20191203", "YYYYMMDD").add(day, "days")
 }
 
-const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment }> = ({ stake, currentDay }) => {
+const ShortAddr: React.FC<{ address: string }> = ({ address }) => {
+  return <span>{address.slice(0, 6) + "..." + address.slice(38)}</span>
+}
+
+const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment }> = ({ stake }) => {
   const unlockMoment = momentForDay(stake.lockedDay + stake.stakedDays)
   return (
     <tr key={stake.stakeId}>
@@ -48,8 +55,21 @@ const App: React.FC = (_props) => {
   }
 
   const downloadIcal = () => {
-    const calendar = 'lol';
-    window.open( "data:text/calendar;charset=utf8," + escape(calendar));
+    const calendar = ical({
+      domain: iCalDomain,
+      prodId: '//superman-industries.com//ical-generator//EN',
+      events: stakes.map((stake) => {
+        const unlockMoment = momentForDay(stake.lockedDay + stake.stakedDays);
+        return {
+          start: unlockMoment,
+          end: unlockMoment.add(1, 'hour'),
+          timestamp: unlockMoment,
+          summary: 'HEX unlock day for #' + stake.stakeId,
+          organizer: 'Richard Heart <mail@example.com>'
+        }
+      })
+    });
+    window.open( "data:text/calendar;charset=utf8," + escape(calendar.toString()));
   }
 
   React.useEffect(() => {
@@ -94,41 +114,51 @@ const App: React.FC = (_props) => {
       .catch(() => setStakes([]))
     }
   }, [stakeCount, library, account]);
-  console.log("stakes", stakes);
+
   const currentDay = moment();
 
   return (
     <div className="App">
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
+        <h2>HEXCAL</h2>
+        <h4>Do not miss your unlock days</h4>
         <p>
-        {active ? `Open HEX Stakes for ${account}` :
-          <button onClick={() => activate()}>
-            connect
-          </button>}
+        HEXCAL allows you to store your <a className="App-link" href={"https://go.hex.win/?r=" + referalAddr} target='_blank'>HEX</a> unlock days in your calendar.
+        <br />Download an iCAL/ICS file and import it into your calendar app.
         </p>
+        {!active ?
+          <p>
+            <button className="App-button" onClick={() => activate()}>
+              Connect to Web3
+            </button>
+          {error ? "error" : null}
+          </p> : null }
+        {(active && account) ?
+          <>
+            <h4>Open HEX Stakes for <ShortAddr address={account} /></h4>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Unlock day</th>
+                  <th>Interval</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stakes.map((stake) => <StakeRow stake={stake} currentDay={currentDay} />)}
+              </tbody>
+            </table>
+            <p>
+            <button className="App-button" onClick={() => downloadIcal()}>
+              Download as iCal/ICS
+            </button>
+            </p>
+          </>
+          : null }
         <p>
-        {error ? "error" : null}
-        </p>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Unlock day</th>
-              <th>Interval</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stakes.map((stake) => <StakeRow stake={stake} currentDay={currentDay} />)}
-          </tbody>
-        </table>
-        <p>
-        <button onClick={() => downloadIcal()}>
-          Download as iCal/ICS
-        </button>
-        </p>
-        <p>
-        Made with 
+        Made with
+        {" "}
         <a
           className="App-link"
           href="https://reactjs.org"
@@ -137,10 +167,19 @@ const App: React.FC = (_props) => {
         >
           HEX
         </a>
+        {" "}
         by
-        <a className="App-link"
-          href="https://twitter.com/coinyon">@coinyon</a>.
-          </p>
+        {" "}
+        <a className="App-link" href="https://twitter.com/coinyon">@coinyon</a>
+        {" "}
+        |
+        {" "}
+        <a className="App-link" href="https://github.com/coinyon">Github</a>
+        {" "}
+        |
+        {" "}
+        <a className="App-link" href={"https://etherscan.io/" + referalAddr}>Donate</a>
+        </p>
       </header>
     </div>
   );

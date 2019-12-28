@@ -13,6 +13,7 @@
     "@types/react-dom": "^16.9.0",
     "@web3-react/core": "^6.0.2",
     "@web3-react/injected-connector": "^6.0.3",
+    "ical-generator": "^1.9.2",
     "moment": "^2.24.0",
     "react": "^16.12.0",
     "react-dom": "^16.12.0",
