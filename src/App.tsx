@@ -12,7 +12,7 @@ import ical from 'ical-generator';
 const injected = new InjectedConnector({ supportedChainIds: [1] })
 const referalAddr = '0xFa2C0AbdaeDc8099887914Ab25AD11B3846655B9'
 const iCalDomain = 'coinyon.github.io'
-const iCalProdId = '//' + iCalDomain + '/hexcal/ical-generator//EN'
+const iCalProdId = '//' + iCalDomain + '//HEXCAL//EN'
 
 interface Stake {
   stakeId: number;
