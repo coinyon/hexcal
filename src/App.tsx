@@ -179,7 +179,7 @@ const App: React.FC = (_props) => {
         {" "}
         |
         {" "}
-        <a className="App-link" href={"https://etherscan.io/" + referalAddr}>Donate</a>
+        <a className="App-link" href={"https://etherscan.io/address/" + referalAddr}>Donate</a>
         </p>
       </header>
     </div>
