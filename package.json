@@ -2,6 +2,7 @@
   "name": "hexcal",
   "version": "0.1.0",
   "private": true,
+  "homepage": "http://coinyon.github.io/hexcal",
   "dependencies": {
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
@@ -13,6 +14,7 @@
     "@types/react-dom": "^16.9.0",
     "@web3-react/core": "^6.0.2",
     "@web3-react/injected-connector": "^6.0.3",
+    "gh-pages": "^2.1.1",
     "ical-generator": "^1.9.2",
     "moment": "^2.24.0",
     "react": "^16.12.0",
@@ -25,7 +27,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": "react-app"
