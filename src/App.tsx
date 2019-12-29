@@ -25,7 +25,7 @@ interface Stake {
 }
 
 const momentForDay = (day: number): moment.Moment => {
-  return moment("20191203", "YYYYMMDD").add(day, "days")
+  return moment("20191203", "YYYYMMDD").add(day - 1, "days")
 }
 
 const ShortAddr: React.FC<{ address: string }> = ({ address }) => {
