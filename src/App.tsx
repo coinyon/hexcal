@@ -66,7 +66,7 @@ const App: React.FC = (_props) => {
         return {
           uid: `stake-${stake.stakeId}`,
           start: unlockDay,
-          end: unlockDay.add(1, 'hour'),
+          end: unlockDay.endOf('day'),
           allDay: true,
           summary: 'HEX unlock day for #' + stake.stakeId,
           location: 'https://go.hex.win/stake/',
