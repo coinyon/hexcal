@@ -48,6 +48,7 @@ const App: React.FC = (_props) => {
   const { account, library, active, error } = web3react;
   // const [events, setEvents] = React.useState<EventData[]>([]);
   const [stakes, setStakes] = React.useState<Stake[]>([]);
+  const [loading, setLoading] = React.useState<boolean>(false);
   const [stakeCount, setStakeCount] = React.useState<number>(0);
 
   (window as any).web3 = web3react;
@@ -68,11 +69,14 @@ const App: React.FC = (_props) => {
           end: unlockDay.add(1, 'hour'),
           allDay: true,
           summary: 'HEX unlock day for #' + stake.stakeId,
-          organizer: 'Richard Heart'
+          location: 'https://go.hex.win/stake/',
+          description: `You need to take action for your HEX stake #${stake.stakeId}.
+
+Reminder created by HEXCAL - https://coinyon.github.io/hexcal/`
         }
       })
     });
-    window.open( "data:text/calendar;charset=utf8," + escape(calendar.toString()));
+    window.open("data:text/calendar;charset=utf8," + escape(calendar.toString()));
   }
 
   React.useEffect(() => {
@@ -86,6 +90,7 @@ const App: React.FC = (_props) => {
       })
       */
 
+      setLoading(true);
       contract.methods.stakeCount(account).call()
       .then((stakeCountStr: string) => setStakeCount(parseInt(stakeCountStr)))
       .catch(() => {
@@ -117,6 +122,7 @@ const App: React.FC = (_props) => {
         }))
       })
       .catch(() => setStakes([]))
+      .finally(() => setLoading(false));
     }
   }, [stakeCount, library, account]);
 
@@ -142,23 +148,27 @@ const App: React.FC = (_props) => {
         {(active && account) ?
           <>
             <h4>Open HEX Stakes for <ShortAddr address={account} /></h4>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Unlock day</th>
-                  <th>Interval</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stakes.map((stake) => <StakeRow stake={stake} currentDay={currentDay} />)}
-              </tbody>
-            </table>
-            <p>
-            <button className="App-button" onClick={() => downloadIcal()}>
-              Download as iCal/ICS
-            </button>
-            </p>
+            { loading ?
+              'Loading...' :
+              <>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Unlock day</th>
+                      <th>Interval</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stakes.map((stake) => <StakeRow stake={stake} currentDay={currentDay} />)}
+                  </tbody>
+                </table>
+                <p>
+                <button className="App-button" onClick={() => downloadIcal()}>
+                  Download as iCal/ICS
+                </button>
+                </p>
+              </> }
           </>
           : null }
         <p>
