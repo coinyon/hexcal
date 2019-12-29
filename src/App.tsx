@@ -33,12 +33,12 @@ const ShortAddr: React.FC<{ address: string }> = ({ address }) => {
 }
 
 const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment }> = ({ stake }) => {
-  const unlockMoment = momentForDay(stake.lockedDay + stake.stakedDays)
+  const unlockDay = momentForDay(stake.lockedDay + stake.stakedDays)
   return (
     <tr key={stake.stakeId}>
       <td>{stake.stakeId}</td>
-      <td>{unlockMoment.calendar()}</td>
-      <td>{unlockMoment.fromNow()}</td>
+      <td>{unlockDay.calendar()}</td>
+      <td>{unlockDay.fromNow()}</td>
     </tr>
   );
 }
@@ -61,13 +61,14 @@ const App: React.FC = (_props) => {
       domain: iCalDomain,
       prodId: iCalProdId,
       events: stakes.map((stake) => {
-        const unlockMoment = momentForDay(stake.lockedDay + stake.stakedDays);
+        const unlockDay = momentForDay(stake.lockedDay + stake.stakedDays);
         return {
-          start: unlockMoment,
-          end: unlockMoment.add(1, 'hour'),
-          timestamp: unlockMoment,
+          uid: `stake-${stake.stakeId}`,
+          start: unlockDay,
+          end: unlockDay.add(1, 'hour'),
+          allDay: true,
           summary: 'HEX unlock day for #' + stake.stakeId,
-          organizer: 'Richard Heart <mail@example.com>'
+          organizer: 'Richard Heart'
         }
       })
     });
@@ -103,15 +104,17 @@ const App: React.FC = (_props) => {
       )
       Promise.all(eventsPromises)
       .then((stakes: any[]) => {
-        setStakes(stakes.map((st) => ({
-          stakeId: parseInt(st.stakeId),
-          stakedDays: parseInt(st.stakedDays),
-          stakedHearts: parseInt(st.stakedHearts),
-          stakeShares: parseInt(st.stakeShares),
-          lockedDay: parseInt(st.lockedDay),
-          unlockedDay: parseInt(st.unlockedDay),
-          isAutoStake: st.isAutoStake
-        })))
+        setStakes(stakes.map((st) => {
+          return {
+            stakeId: parseInt(st.stakeId),
+            stakedDays: parseInt(st.stakedDays),
+            stakedHearts: parseInt(st.stakedHearts),
+            stakeShares: parseInt(st.stakeShares),
+            lockedDay: parseInt(st.lockedDay),
+            unlockedDay: parseInt(st.unlockedDay),
+            isAutoStake: st.isAutoStake
+          }
+        }))
       })
       .catch(() => setStakes([]))
     }
@@ -126,7 +129,7 @@ const App: React.FC = (_props) => {
         <h2>HEXCAL</h2>
         <h4>Do not miss your unlock days</h4>
         <p>
-        HEXCAL allows you to add the unlock days of your <a className="App-link" href={"https://go.hex.win/?r=" + referalAddr} target='_blank'>HEX</a> stakes to your calendar.
+        HEXCAL allows you to add the unlock days of your <a className="App-link" href={"https://go.hex.win/?r=" + referalAddr} target='_blank' rel="noopener noreferrer">HEX</a> stakes to your calendar.
         <br />Download an iCAL/ICS file and import it into your calendar app.
         </p>
         {!active ?
@@ -165,8 +168,9 @@ const App: React.FC = (_props) => {
           className="App-link"
           target="_blank"
           href={"https://go.hex.win/?r=" + referalAddr}
+          rel="noopener noreferrer"
         >
-          <img src={hexagon} height="17em" width="17em" />
+          <img src={hexagon} alt="HEX" height="17em" width="17em" />
         </a>
         {" "}
         by
