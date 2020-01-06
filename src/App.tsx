@@ -9,6 +9,7 @@ import * as HEX from './Hex';
 import moment from 'moment';
 import ical from 'ical-generator';
 import { sort } from 'ramda';
+import download from 'downloadjs';
 
 const injected = new InjectedConnector({ supportedChainIds: [1] })
 const referalAddr = '0xFa2C0AbdaeDc8099887914Ab25AD11B3846655B9'
@@ -78,7 +79,8 @@ Reminder created by HEXCAL - https://coinyon.github.io/hexcal/`
         }
       })
     });
-    window.open("data:text/calendar;charset=utf8," + escape(calendar.toString()));
+
+    download(calendar.toString(), "MyHEXStakes.ics", "text/calendar");
   }
 
   React.useEffect(() => {
