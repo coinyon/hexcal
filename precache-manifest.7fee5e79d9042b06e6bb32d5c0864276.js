@@ -1,23 +1,23 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "3a9a15690fb3ad5f3f8f1c12ef499659",
+    "revision": "b485f039d7d2c5fd68392ffe9ff5f69a",
     "url": "/hexcal/index.html"
   },
   {
-    "revision": "a2fc279d9a9d0717085f",
+    "revision": "06475e7c68b06538a9a1",
     "url": "/hexcal/static/css/main.bd8026b4.chunk.css"
   },
   {
-    "revision": "f786242f58e95ab89506",
-    "url": "/hexcal/static/js/2.672f19b5.chunk.js"
+    "revision": "d29c1985cb25b5a55262",
+    "url": "/hexcal/static/js/2.9b6c35d1.chunk.js"
   },
   {
     "revision": "883c84f18459a3bd9b8cad161ce0889f",
-    "url": "/hexcal/static/js/2.672f19b5.chunk.js.LICENSE"
+    "url": "/hexcal/static/js/2.9b6c35d1.chunk.js.LICENSE"
   },
   {
-    "revision": "a2fc279d9a9d0717085f",
-    "url": "/hexcal/static/js/main.17e9ca34.chunk.js"
+    "revision": "06475e7c68b06538a9a1",
+    "url": "/hexcal/static/js/main.cc6c060b.chunk.js"
   },
   {
     "revision": "97e78341ba481f94213c",
