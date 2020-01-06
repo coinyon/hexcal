@@ -8,6 +8,7 @@ import { InjectedConnector } from '@web3-react/injected-connector'
 import * as HEX from './Hex';
 import moment from 'moment';
 import ical from 'ical-generator';
+import { sort } from 'ramda';
 
 const injected = new InjectedConnector({ supportedChainIds: [1] })
 const referalAddr = '0xFa2C0AbdaeDc8099887914Ab25AD11B3846655B9'
@@ -22,6 +23,7 @@ interface Stake {
   stakedDays: number;
   unlockedDay: number;
   isAutoStake: boolean;
+  unlockDay: moment.Moment;
 }
 
 const momentForDay = (day: number): moment.Moment => {
@@ -33,15 +35,16 @@ const ShortAddr: React.FC<{ address: string }> = ({ address }) => {
 }
 
 const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment }> = ({ stake }) => {
-  const unlockDay = momentForDay(stake.lockedDay + stake.stakedDays)
   return (
     <tr key={stake.stakeId}>
       <td>{stake.stakeId}</td>
-      <td>{unlockDay.calendar()}</td>
-      <td>{unlockDay.fromNow()}</td>
+      <td>{stake.unlockDay.calendar()}</td>
+      <td>{stake.unlockDay.fromNow()}</td>
     </tr>
   );
 }
+
+const sortedStakes = sort<Stake>((st1, st2) => st1.unlockDay.diff(st2.unlockDay))
 
 const App: React.FC = (_props) => {
   const web3react = useWeb3React<Web3>();
@@ -61,12 +64,11 @@ const App: React.FC = (_props) => {
     const calendar = ical({
       domain: iCalDomain,
       prodId: iCalProdId,
-      events: stakes.map((stake) => {
-        const unlockDay = momentForDay(stake.lockedDay + stake.stakedDays);
+      events: sortedStakes(stakes).map((stake) => {
         return {
           uid: `stake-${stake.stakeId}`,
-          start: unlockDay,
-          end: unlockDay.endOf('day'),
+          start: stake.unlockDay,
+          end: stake.unlockDay.endOf('day'),
           allDay: true,
           summary: 'HEX unlock day for #' + stake.stakeId,
           location: 'https://go.hex.win/stake/',
@@ -110,14 +112,18 @@ Reminder created by HEXCAL - https://coinyon.github.io/hexcal/`
       Promise.all(eventsPromises)
       .then((stakes: any[]) => {
         setStakes(stakes.map((st) => {
+          const lockedDay = parseInt(st.lockedDay)
+          const stakedDays = parseInt(st.stakedDays)
+          const unlockedDay = parseInt(st.unlockedDay)
           return {
             stakeId: parseInt(st.stakeId),
-            stakedDays: parseInt(st.stakedDays),
+            stakedDays,
             stakedHearts: parseInt(st.stakedHearts),
             stakeShares: parseInt(st.stakeShares),
-            lockedDay: parseInt(st.lockedDay),
-            unlockedDay: parseInt(st.unlockedDay),
-            isAutoStake: st.isAutoStake
+            lockedDay,
+            unlockedDay,
+            isAutoStake: st.isAutoStake,
+            unlockDay: momentForDay(lockedDay + stakedDays)
           }
         }))
       })
@@ -160,7 +166,7 @@ Reminder created by HEXCAL - https://coinyon.github.io/hexcal/`
                     </tr>
                   </thead>
                   <tbody>
-                    {stakes.map((stake) => <StakeRow stake={stake} currentDay={currentDay} />)}
+                    {sortedStakes(stakes).map((stake: Stake) => <StakeRow key={stake.stakeId} stake={stake} currentDay={currentDay} />)}
                   </tbody>
                 </table>
                 <p>
