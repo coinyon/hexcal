@@ -5,9 +5,10 @@ import { InjectedConnector } from '@web3-react/injected-connector'
 import * as HEX from './Hex';
 import moment from 'moment';
 import ical from 'ical-generator';
-import { sort } from 'ramda';
+import { flatten, sort, reject, equals } from 'ramda';
 import download from 'downloadjs';
-import { Button, Form, Grid, List, Label, Icon, Header, Image, Table, Card, Segment } from 'semantic-ui-react'
+import { Modal, Input, Button, Form, Grid, Label, Icon, Header, Image, Table, Card, Segment } from 'semantic-ui-react'
+import { useHashAccountsStore } from "./AccountStore"
 
 import logo from './logo.png';
 import hexagon from './hexagon.svg';
@@ -27,6 +28,7 @@ interface Stake {
   stakedDays: number;
   unlockedDay: number;
   isAutoStake: boolean;
+  address: string;
   unlockDay: moment.Moment;
 }
 
@@ -42,6 +44,7 @@ const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment }> = ({ stake
   return (
     <Table.Row key={stake.stakeId}>
       <Table.Cell>{stake.stakeId}</Table.Cell>
+      <Table.Cell><Label><ShortAddr address={stake.address} /></Label></Table.Cell>
       <Table.Cell>{stake.unlockDay.calendar()}</Table.Cell>
       <Table.Cell>{stake.unlockDay.fromNow()}</Table.Cell>
     </Table.Row>
@@ -56,7 +59,9 @@ const App: React.FC = (_props) => {
   // const [events, setEvents] = React.useState<EventData[]>([]);
   const [stakes, setStakes] = React.useState<Stake[]>([]);
   const [loading, setLoading] = React.useState<boolean>(false);
-  const [stakeCount, setStakeCount] = React.useState<number>(0);
+  const [accounts, setAccounts] = useHashAccountsStore();
+  const [addDialogIsOpen, setAddDialogOpen] = React.useState<boolean>(false);
+  const addrInput = React.useRef<Input>() as any;
 
   (window as any).web3 = web3react;
 
@@ -78,7 +83,10 @@ const App: React.FC = (_props) => {
           location: 'https://go.hex.win/stake/',
           description: `You need to take action for your HEX stake #${stake.stakeId}.
 
-Reminder created by HEXCAL - https://coinyon.github.io/hexcal/`
+This stake has been made with account ${stake.address}.
+
+Reminder created by HEXCAL: https://coinyon.github.io/hexcal/
+Please donate if you found this useful.`
         }
       })
     });
@@ -87,55 +95,56 @@ Reminder created by HEXCAL - https://coinyon.github.io/hexcal/`
   }
 
   React.useEffect(() => {
-    if (library) {
+    if (library && account) {
       const contract = new library.eth.Contract(HEX.abi, HEX.address);
-      /*
-      contract.getPastEvents("StakeStart", { fromBlock: 900000, filter: { stakerAddr: account } } as any)
-      .then(setEvents as any)
-      .catch(() => {
-        setEvents([]);
-      })
-      */
+      if (accounts.length === 0) {
+        setAccounts([account]);
+      }
+
+      const getStakes = (acc: string): Promise<Stake[]> => {
+        return new Promise((resolveStakes) => {
+          new Promise((resolve) => {
+            contract.methods.stakeCount(acc).call()
+            .then((stakeCountStr: string) => resolve(parseInt(stakeCountStr)))
+            .catch(() => {
+              resolve(0);
+            })
+          }).then((stakeCount) => {
+            const eventsPromises = Array.from(new Array(stakeCount).keys()).map(
+              (n) => {
+                return contract.methods.stakeLists(acc, n).call()
+              }
+            )
+            Promise.all(eventsPromises)
+            .then((stakes: any[]) => {
+              resolveStakes(stakes.map((st) => {
+                const lockedDay = parseInt(st.lockedDay)
+                const stakedDays = parseInt(st.stakedDays)
+                const unlockedDay = parseInt(st.unlockedDay)
+                return {
+                  address: acc,
+                  stakeId: parseInt(st.stakeId),
+                  stakedDays,
+                  stakedHearts: parseInt(st.stakedHearts),
+                  stakeShares: parseInt(st.stakeShares),
+                  lockedDay,
+                  unlockedDay,
+                  isAutoStake: st.isAutoStake,
+                  unlockDay: momentForDay(lockedDay + stakedDays)
+                }
+              }))
+            })
+            .catch(() => resolveStakes([]))
+          });
+        });
+      }
 
       setLoading(true);
-      contract.methods.stakeCount(account).call()
-      .then((stakeCountStr: string) => setStakeCount(parseInt(stakeCountStr)))
-      .catch(() => {
-        setStakeCount(0);
-      });
-    }
-  }, [account, library]);
-
-  React.useEffect(() => {
-    if (library && stakeCount) {
-      const contract = new library.eth.Contract(HEX.abi, HEX.address);
-      const eventsPromises = Array.from(new Array(stakeCount).keys()).map(
-        (n) => {
-          return contract.methods.stakeLists(account, n).call()
-        }
-      )
-      Promise.all(eventsPromises)
-      .then((stakes: any[]) => {
-        setStakes(stakes.map((st) => {
-          const lockedDay = parseInt(st.lockedDay)
-          const stakedDays = parseInt(st.stakedDays)
-          const unlockedDay = parseInt(st.unlockedDay)
-          return {
-            stakeId: parseInt(st.stakeId),
-            stakedDays,
-            stakedHearts: parseInt(st.stakedHearts),
-            stakeShares: parseInt(st.stakeShares),
-            lockedDay,
-            unlockedDay,
-            isAutoStake: st.isAutoStake,
-            unlockDay: momentForDay(lockedDay + stakedDays)
-          }
-        }))
-      })
-      .catch(() => setStakes([]))
+      Promise.all(accounts.map(getStakes))
+      .then((stakesLists: Stake[][]) => { setStakes(flatten(stakesLists)) })
       .finally(() => setLoading(false));
     }
-  }, [stakeCount, library, account]);
+  }, [account, library, accounts]);
 
   const currentDay = moment();
 
@@ -150,12 +159,16 @@ Reminder created by HEXCAL - https://coinyon.github.io/hexcal/`
         <Form size='large'>
         {!active ?
           <>
-          <Segment>
-            HEXCAL allows you to add the unlock days of your <a className="App-link" href={"https://go.hex.win/?r=" + referalAddr} target='_blank' rel="noopener noreferrer">HEX</a> stakes to your calendar.
-            <br />
-            Download an iCAL/ICS file and import it into your calendar app.
-          </Segment>
           <Segment placeholder>
+            <p>
+              HEXCAL allows you to add the unlock days of your <a className="App-link" href={"https://go.hex.win/?r=" + referalAddr} target='_blank' rel="noopener noreferrer">HEX</a> stakes to your calendar.
+            </p>
+            <p>
+              In order to use HEXCAL, you need a Web3 enabled browser (e.g. Metamask).
+              After you connected your account,
+              you'll be able to download an iCAL/ICS file and import it into
+              your calendar app.
+            </p>
             <Button primary onClick={() => activate()}>
               Connect to Web3
             </Button>
@@ -166,24 +179,49 @@ Reminder created by HEXCAL - https://coinyon.github.io/hexcal/`
           <Card fluid>
             <Card.Content header="Open HEX stakes" />
         <Card.Content>
-          <List>
-            <List.Item>
-              <Label>
-                <ShortAddr address={account} />
-                <Icon name='delete' />
-              </Label>
-            </List.Item>
-          </List>
+            { accounts.map((acc) =>
+              <Label key={acc}>
+                <ShortAddr address={acc} />
+                <Icon name='delete' onClick={() => setAccounts(reject(equals(acc))(accounts))} />
+              </Label>) }
+            <Modal
+              trigger={
+                <Button size="mini" onClick={() => setAddDialogOpen(true)}>
+                  <Icon name="add" />
+                  Add Account
+                </Button>
+              }
+              size='mini'
+              open={addDialogIsOpen}
+              onClose={() => setAddDialogOpen(false)}
+            >
+              <Modal.Content>
+                Ethereum address:
+                <Input fluid ref={addrInput} placeholder='0x0000000000000000000000000000000000000000' />
+              </Modal.Content>
+              <Modal.Actions>
+                <Button primary onClick={() => {
+                  const addr = addrInput.current.inputRef.current.value;
+                  if (Web3.utils.isAddress(addr)) {
+                    setAccounts(accounts.concat(addr));
+                    setAddDialogOpen(false);
+                  }
+                }}>
+                  <Icon name='add' /> Add Account
+                </Button>
+              </Modal.Actions>
+            </Modal>
         </Card.Content>
         <Card.Content>
           <Segment loading={loading} basic>
             { loading ?
               'Loading...' :
               <>
-              <Table basic='very' fluid celled>
+              <Table basic='very' celled>
                 <Table.Header>
                   <Table.Row>
                     <Table.HeaderCell>ID</Table.HeaderCell>
+                    <Table.HeaderCell>Account</Table.HeaderCell>
                     <Table.HeaderCell>Unlock day</Table.HeaderCell>
                     <Table.HeaderCell>Interval</Table.HeaderCell>
                   </Table.Row>
