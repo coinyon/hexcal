@@ -5,26 +5,28 @@
   "homepage": "http://coinyon.github.io/hexcal",
   "dependencies": {
     "@testing-library/jest-dom": "^4.2.4",
-    "@testing-library/react": "^9.3.2",
-    "@testing-library/user-event": "^7.1.2",
+    "@testing-library/react": "^9.4.0",
+    "@testing-library/user-event": "^8.0.3",
     "@types/downloadjs": "^1.4.1",
-    "@types/jest": "^24.0.0",
+    "@types/jest": "^24.0.25",
     "@types/moment": "^2.13.0",
-    "@types/node": "^12.0.0",
+    "@types/node": "^13.1.6",
     "@types/ramda": "^0.26.39",
-    "@types/react": "^16.9.0",
-    "@types/react-dom": "^16.9.0",
+    "@types/react": "^16.9.17",
+    "@types/react-dom": "^16.9.4",
     "@web3-react/core": "^6.0.2",
     "@web3-react/injected-connector": "^6.0.3",
     "downloadjs": "^1.4.7",
-    "gh-pages": "^2.1.1",
+    "gh-pages": "^2.2.0",
     "ical-generator": "^1.9.2",
     "moment": "^2.24.0",
     "ramda": "^0.26.1",
     "react": "^16.12.0",
     "react-dom": "^16.12.0",
     "react-scripts": "3.3.0",
-    "typescript": "~3.7.2",
+    "semantic-ui-css": "^2.4.1",
+    "semantic-ui-react": "^0.88.2",
+    "typescript": "~3.7.4",
     "web3": "^1.2.4"
   },
   "scripts": {
@@ -48,5 +50,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "npm-check-updates": "^4.0.1"
   }
 }
