@@ -144,7 +144,7 @@ Please donate if you found this useful.`
       .then((stakesLists: Stake[][]) => { setStakes(flatten(stakesLists)) })
       .finally(() => setLoading(false));
     }
-  }, [account, library, accounts]);
+  }, [account, library, accounts, setAccounts]);
 
   const currentDay = moment();
 
