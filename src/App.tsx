@@ -19,6 +19,7 @@ const injected = new InjectedConnector({ supportedChainIds: [1] })
 const referalAddr = '0xFa2C0AbdaeDc8099887914Ab25AD11B3846655B9'
 const iCalDomain = 'coinyon.github.io'
 const iCalProdId = '//' + iCalDomain + '//HEXCAL//EN'
+const hexLaunchDay = moment("20191203", "YYYYMMDD")
 
 interface Stake {
   stakeId: number;
@@ -33,7 +34,11 @@ interface Stake {
 }
 
 const momentForDay = (day: number): moment.Moment => {
-  return moment("20191203", "YYYYMMDD").add(day - 1, "days")
+  return hexLaunchDay.clone().add(day - 1, "days")
+}
+
+const formatHearts = (hearts: number): string => {
+  return (hearts / 1e8).toLocaleString([], { minimumFractionDigits: 3, maximumFractionDigits: 3 })
 }
 
 const ShortAddr: React.FC<{ address: string }> = ({ address }) => {
@@ -43,10 +48,24 @@ const ShortAddr: React.FC<{ address: string }> = ({ address }) => {
 const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment }> = ({ stake }) => {
   return (
     <Table.Row key={stake.stakeId}>
-      <Table.Cell>{stake.stakeId}</Table.Cell>
+      <Table.Cell textAlign="right">{stake.stakeId}</Table.Cell>
       <Table.Cell><Label><ShortAddr address={stake.address} /></Label></Table.Cell>
       <Table.Cell>{stake.unlockDay.calendar()}</Table.Cell>
       <Table.Cell>{stake.unlockDay.fromNow()}</Table.Cell>
+      <Table.Cell textAlign="right">{formatHearts(stake.stakedHearts)}</Table.Cell>
+    </Table.Row>
+  );
+}
+
+const SummaryRow: React.FC<{ stakes: Stake[] }> = ({ stakes }) => {
+  const totalHearts = stakes.map((st) => st.stakedHearts).reduce((a, b) => a + b, 0)
+  return (
+    <Table.Row key={"summary"}>
+      <Table.Cell textAlign="right"></Table.Cell>
+      <Table.Cell></Table.Cell>
+      <Table.Cell></Table.Cell>
+      <Table.Cell></Table.Cell>
+      <Table.Cell textAlign="right">{formatHearts(totalHearts)}</Table.Cell>
     </Table.Row>
   );
 }
@@ -81,9 +100,9 @@ const App: React.FC = (_props) => {
           allDay: true,
           summary: 'HEX unlock day for #' + stake.stakeId,
           location: 'https://go.hex.win/stake/',
-          description: `You need to take action for your HEX stake #${stake.stakeId}.
+          description: `You need to take action for your ${formatHearts(stake.stakedHearts)} HEX stake #${stake.stakeId}.
 
-This stake has been made with account ${stake.address}.
+This stake with has been made with account ${stake.address}.
 
 Reminder created by HEXCAL: https://coinyon.github.io/hexcal/
 Please donate if you found this useful.`
@@ -150,7 +169,7 @@ Please donate if you found this useful.`
 
   return (
     <Grid textAlign='center' style={{ height: '100vh' }} verticalAlign='middle' className="App">
-      <Grid.Column style={{ maxWidth: 450 }}>
+      <Grid.Column style={{ maxWidth: '620px' }}>
         <Header as="header">
           <Image src={logo} size="big" className="App-logo" alt="logo" />
           <h2>HEXCAL</h2>
@@ -177,8 +196,7 @@ Please donate if you found this useful.`
           </>: null }
         {(active && account) ?
           <Card fluid>
-            <Card.Content header="Open HEX stakes" />
-        <Card.Content>
+            <Card.Content>
             { accounts.map((acc) =>
               <Label key={acc}>
                 <ShortAddr address={acc} />
@@ -212,22 +230,25 @@ Please donate if you found this useful.`
               </Modal.Actions>
             </Modal>
         </Card.Content>
-        <Card.Content>
-          <Segment loading={loading} basic>
+          <Card.Content>
+          <Header>Open HEX stakes</Header>
+          <Segment loading={loading} basic style={{ padding: '1em 0em' }}>
             { loading ?
               'Loading...' :
               <>
-              <Table basic='very' celled>
+              <Table basic='very'>
                 <Table.Header>
                   <Table.Row>
                     <Table.HeaderCell>ID</Table.HeaderCell>
                     <Table.HeaderCell>Account</Table.HeaderCell>
                     <Table.HeaderCell>Unlock day</Table.HeaderCell>
                     <Table.HeaderCell>Interval</Table.HeaderCell>
+                    <Table.HeaderCell>Principal<small> (HEX)</small></Table.HeaderCell>
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
                   {sortedStakes(stakes).map((stake: Stake) => <StakeRow key={stake.stakeId} stake={stake} currentDay={currentDay} />)}
+                  <SummaryRow key={"summary"} stakes={stakes} />
                 </Table.Body>
                 </Table>
               </> }
