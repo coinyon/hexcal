@@ -1,28 +1,28 @@
 {
   "files": {
     "main.css": "/hexcal/static/css/main.bd8026b4.chunk.css",
-    "main.js": "/hexcal/static/js/main.4cd7854a.chunk.js",
-    "main.js.map": "/hexcal/static/js/main.4cd7854a.chunk.js.map",
-    "runtime-main.js": "/hexcal/static/js/runtime-main.eb68f879.js",
-    "runtime-main.js.map": "/hexcal/static/js/runtime-main.eb68f879.js.map",
-    "static/css/2.c069aff5.chunk.css": "/hexcal/static/css/2.c069aff5.chunk.css",
-    "static/js/2.f4f70d20.chunk.js": "/hexcal/static/js/2.f4f70d20.chunk.js",
-    "static/js/2.f4f70d20.chunk.js.map": "/hexcal/static/js/2.f4f70d20.chunk.js.map",
+    "main.js": "/hexcal/static/js/main.126601f3.chunk.js",
+    "main.js.map": "/hexcal/static/js/main.126601f3.chunk.js.map",
+    "runtime-main.js": "/hexcal/static/js/runtime-main.a112d79b.js",
+    "runtime-main.js.map": "/hexcal/static/js/runtime-main.a112d79b.js.map",
+    "static/css/2.33342332.chunk.css": "/hexcal/static/css/2.33342332.chunk.css",
+    "static/js/2.de99cf1f.chunk.js": "/hexcal/static/js/2.de99cf1f.chunk.js",
+    "static/js/2.de99cf1f.chunk.js.map": "/hexcal/static/js/2.de99cf1f.chunk.js.map",
     "index.html": "/hexcal/index.html",
-    "precache-manifest.d4e602cdfa9fc8861767985098ea2cc3.js": "/hexcal/precache-manifest.d4e602cdfa9fc8861767985098ea2cc3.js",
+    "precache-manifest.591d173400d19e90a7cbdd84c9d05813.js": "/hexcal/precache-manifest.591d173400d19e90a7cbdd84c9d05813.js",
     "service-worker.js": "/hexcal/service-worker.js",
-    "static/css/2.c069aff5.chunk.css.map": "/hexcal/static/css/2.c069aff5.chunk.css.map",
+    "static/css/2.33342332.chunk.css.map": "/hexcal/static/css/2.33342332.chunk.css.map",
     "static/css/main.bd8026b4.chunk.css.map": "/hexcal/static/css/main.bd8026b4.chunk.css.map",
-    "static/js/2.f4f70d20.chunk.js.LICENSE": "/hexcal/static/js/2.f4f70d20.chunk.js.LICENSE",
+    "static/js/2.de99cf1f.chunk.js.LICENSE.txt": "/hexcal/static/js/2.de99cf1f.chunk.js.LICENSE.txt",
     "static/media/semantic.min.css": "/hexcal/static/media/outline-icons.ef60a4f6.woff",
     "static/media/hexagon.svg": "/hexcal/static/media/hexagon.93c2c7be.svg",
     "static/media/logo.png": "/hexcal/static/media/logo.5617cd50.png"
   },
   "entrypoints": [
-    "static/js/runtime-main.eb68f879.js",
-    "static/css/2.c069aff5.chunk.css",
-    "static/js/2.f4f70d20.chunk.js",
+    "static/js/runtime-main.a112d79b.js",
+    "static/css/2.33342332.chunk.css",
+    "static/js/2.de99cf1f.chunk.js",
     "static/css/main.bd8026b4.chunk.css",
-    "static/js/main.4cd7854a.chunk.js"
+    "static/js/main.126601f3.chunk.js"
   ]
 }
