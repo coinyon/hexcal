@@ -2,6 +2,10 @@
 
 HEXCAL allows you to add the unlock days of your HEX stakes to your calendar.
 
+## Hosted version
+
+[https://coinyon.github.io/hexcal/](https://coinyon.github.io/hexcal/)
+
 ## Features
 
  * See your stakes' unlock days and principal in HEX and USD
