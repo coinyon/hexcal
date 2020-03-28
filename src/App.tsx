@@ -2,7 +2,9 @@ import React from 'react';
 import Web3 from 'web3';
 import { useWeb3React } from '@web3-react/core'
 import { InjectedConnector } from '@web3-react/injected-connector'
-import * as HEX from './Hex';
+import * as HEX from './library/HEX';
+import * as UNISWAP_HEX from './library/UNISWAP_HEX';
+import * as MAKER_ETHUSD from './library/MAKER_ETHUSD';
 import moment from 'moment';
 import ical from 'ical-generator';
 import { flatten, sort, reject, equals } from 'ramda';
@@ -41,11 +43,15 @@ const formatHearts = (hearts: number): string => {
   return (hearts / 1e8).toLocaleString([], { minimumFractionDigits: 3, maximumFractionDigits: 3 })
 }
 
+const formatUSD = (usd: number): string => {
+  return usd.toLocaleString([], { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 const ShortAddr: React.FC<{ address: string }> = ({ address }) => {
   return <span>{address.slice(0, 6) + "..." + address.slice(38)}</span>
 }
 
-const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment }> = ({ stake }) => {
+const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment, hexPriceUsd: number | null }> = ({ stake, hexPriceUsd }) => {
   return (
     <Table.Row key={stake.stakeId}>
       <Table.Cell textAlign="right">{stake.stakeId}</Table.Cell>
@@ -53,11 +59,12 @@ const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment }> = ({ stake
       <Table.Cell>{stake.unlockDay.calendar()}</Table.Cell>
       <Table.Cell>{stake.unlockDay.fromNow()}</Table.Cell>
       <Table.Cell textAlign="right">{formatHearts(stake.stakedHearts)}</Table.Cell>
+      <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(stake.stakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
     </Table.Row>
   );
 }
 
-const SummaryRow: React.FC<{ stakes: Stake[] }> = ({ stakes }) => {
+const SummaryRow: React.FC<{ stakes: Stake[], hexPriceUsd: number | null }> = ({ stakes, hexPriceUsd }) => {
   const totalHearts = stakes.map((st) => st.stakedHearts).reduce((a, b) => a + b, 0)
   return (
     <Table.Row key={"summary"}>
@@ -66,33 +73,72 @@ const SummaryRow: React.FC<{ stakes: Stake[] }> = ({ stakes }) => {
       <Table.Cell></Table.Cell>
       <Table.Cell></Table.Cell>
       <Table.Cell textAlign="right">{formatHearts(totalHearts)}</Table.Cell>
+      <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(totalHearts / 1e8 * hexPriceUsd)}</Table.Cell>
     </Table.Row>
   );
 }
 
-const sortedStakes = sort<Stake>((st1, st2) => st1.unlockDay.diff(st2.unlockDay))
+function useContract<T>(web3react: any, abi: any, address: string, f: (contract: any, libary: Web3) => Promise<T>): [T | null, boolean] {
+
+  const { account, library } = web3react;
+  const [resultVal, setResultVal] = React.useState<T | null>(null);
+  const [loading, setLoading] = React.useState<boolean>(true);
+
+  React.useEffect(() => {
+    if (library && account) {
+      const contract = new library.eth.Contract(abi, address);
+      f(contract, library).then((result) => {
+        setResultVal(result)
+        setLoading(false)
+      })
+    }
+  }, [account, library, abi, address, f])
+
+  return [ resultVal, loading ]
+}
+
+const sortByUnlockDay = sort<Stake>((st1, st2) => st1.unlockDay.diff(st2.unlockDay))
 
 const App: React.FC = (_props) => {
+
+  // Web3 hooks
   const web3react = useWeb3React<Web3>();
   const { account, library, active, error } = web3react;
+  const [accounts, setAccounts] = useHashAccountsStore();
+  const activate = React.useCallback(() => {
+    web3react.activate(injected);
+  }, [web3react])
+
+  // Local State hooks
   // const [events, setEvents] = React.useState<EventData[]>([]);
   const [stakes, setStakes] = React.useState<Stake[]>([]);
   const [loading, setLoading] = React.useState<boolean>(false);
-  const [accounts, setAccounts] = useHashAccountsStore();
   const [addDialogIsOpen, setAddDialogOpen] = React.useState<boolean>(false);
+  const sortedStakes = React.useMemo(() => sortByUnlockDay(stakes), [stakes])
+
+  // Refs
   const addrInput = React.useRef<Input>() as any;
 
-  (window as any).web3 = web3react;
+  const [hexPriceEth, hexPriceEthLoading] = useContract<number>(web3react, UNISWAP_HEX.abi, UNISWAP_HEX.address, async (contract) => {
+    const theorethicalSellAmount = 1000;
+    const theorethicalEthAmount = await contract.methods.getTokenToEthInputPrice(theorethicalSellAmount).call()
+    return (theorethicalEthAmount / theorethicalSellAmount) / 10e9 // from Gwei
+  })
 
-  const activate = () => {
-    web3react.activate(injected);
-  }
+  const [ethPriceUsd, ethPriceUsdLoading] = useContract<number>(web3react, MAKER_ETHUSD.abi, MAKER_ETHUSD.address, async (contract, library) => {
+    const resultWei = await contract.methods.read().call()
+    return parseFloat(library.utils.fromWei(resultWei))
+  })
+
+  const hexPriceUsd = (!ethPriceUsdLoading && !hexPriceEthLoading && hexPriceEth !== null && ethPriceUsd !== null) ? hexPriceEth * ethPriceUsd : null
+
+  //;(window as any).web3 = web3react.library
 
   const downloadIcal = () => {
     const calendar = ical({
       domain: iCalDomain,
       prodId: iCalProdId,
-      events: sortedStakes(stakes).map((stake) => {
+      events: sortedStakes.map((stake) => {
         return {
           uid: `stake-${stake.stakeId}`,
           start: stake.unlockDay,
@@ -169,7 +215,7 @@ Please donate if you found this useful.`
 
   return (
     <Grid textAlign='center' style={{ height: '100vh' }} verticalAlign='middle' className="App">
-      <Grid.Column style={{ maxWidth: '620px' }}>
+      <Grid.Column style={{ maxWidth: '630px' }}>
         <Header as="header">
           <Image src={logo} size="big" className="App-logo" alt="logo" />
           <h2>HEXCAL</h2>
@@ -244,11 +290,12 @@ Please donate if you found this useful.`
                     <Table.HeaderCell>Unlock day</Table.HeaderCell>
                     <Table.HeaderCell>Interval</Table.HeaderCell>
                     <Table.HeaderCell>Principal<small> (HEX)</small></Table.HeaderCell>
+                    <Table.HeaderCell><small>(USD)</small></Table.HeaderCell>
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {sortedStakes(stakes).map((stake: Stake) => <StakeRow key={stake.stakeId} stake={stake} currentDay={currentDay} />)}
-                  <SummaryRow key={"summary"} stakes={stakes} />
+                  {sortedStakes.map((stake: Stake) => <StakeRow key={stake.stakeId} stake={stake} currentDay={currentDay} hexPriceUsd={hexPriceUsd} />)}
+                  <SummaryRow key={"summary"} stakes={stakes} hexPriceUsd={hexPriceUsd} />
                 </Table.Body>
                 </Table>
               </> }
