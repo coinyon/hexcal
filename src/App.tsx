@@ -35,6 +35,11 @@ interface Stake {
   unlockDay: moment.Moment;
 }
 
+interface HexBalance {
+  address: string;
+  balance: number;
+}
+
 const momentForDay = (day: number): moment.Moment => {
   return hexLaunchDay.clone().add(day - 1, "days")
 }
@@ -78,7 +83,7 @@ const SummaryRow: React.FC<{ stakes: Stake[], hexPriceUsd: number | null }> = ({
   );
 }
 
-function useContract<T>(web3react: any, abi: any, address: string, f: (contract: any, libary: Web3) => Promise<T>): [T | null, boolean] {
+function useContract<T>(web3react: any, abi: any, address: string, func: (contract: any, libary: Web3) => Promise<T>): [T | null, boolean] {
 
   const { account, library } = web3react;
   const [resultVal, setResultVal] = React.useState<T | null>(null);
@@ -87,12 +92,12 @@ function useContract<T>(web3react: any, abi: any, address: string, f: (contract:
   React.useEffect(() => {
     if (library && account) {
       const contract = new library.eth.Contract(abi, address);
-      f(contract, library).then((result) => {
+      func(contract, library).then((result) => {
         setResultVal(result)
         setLoading(false)
       })
     }
-  }, [account, library, abi, address, f])
+  }, [account, library, abi, address, func])
 
   return [ resultVal, loading ]
 }
@@ -119,16 +124,21 @@ const App: React.FC = (_props) => {
   // Refs
   const addrInput = React.useRef<Input>() as any;
 
-  const [hexPriceEth, hexPriceEthLoading] = useContract<number>(web3react, UNISWAP_HEX.abi, UNISWAP_HEX.address, async (contract) => {
+  const [hexPriceEth, hexPriceEthLoading] = useContract<number>(web3react, UNISWAP_HEX.abi, UNISWAP_HEX.address, React.useCallback(async (contract) => {
     const theorethicalSellAmount = 1000;
     const theorethicalEthAmount = await contract.methods.getTokenToEthInputPrice(theorethicalSellAmount).call()
     return (theorethicalEthAmount / theorethicalSellAmount) / 10e9 // from Gwei
-  })
+  }, []))
 
-  const [ethPriceUsd, ethPriceUsdLoading] = useContract<number>(web3react, MAKER_ETHUSD.abi, MAKER_ETHUSD.address, async (contract, library) => {
+  const [ethPriceUsd, ethPriceUsdLoading] = useContract<number>(web3react, MAKER_ETHUSD.abi, MAKER_ETHUSD.address, React.useCallback(async (contract, library) => {
     const resultWei = await contract.methods.read().call()
     return parseFloat(library.utils.fromWei(resultWei))
-  })
+  }, []))
+
+  const [hexBalances, hexBalancesLoading] = useContract<HexBalance[]>(web3react, HEX.abi, HEX.address, React.useCallback(async (contract) => {
+    const balances = await Promise.all(accounts.map((acc) => contract.methods.balanceOf(acc).call()))
+    return balances.map((balance, index) => ({ address: accounts[index], balance }))
+  }, [ accounts ]))
 
   const hexPriceUsd = (!ethPriceUsdLoading && !hexPriceEthLoading && hexPriceEth !== null && ethPriceUsd !== null) ? hexPriceEth * ethPriceUsd : null
 
@@ -281,7 +291,7 @@ Please donate if you found this useful.`
                 </Button>
               </Modal.Actions>
             </Modal>
-        </Card.Content>
+          </Card.Content>
           <Card.Content>
           <Header>Open HEX stakes</Header>
           <Segment loading={loading} basic style={{ padding: '1em 0em' }}>
@@ -308,13 +318,39 @@ Please donate if you found this useful.`
           </Segment>
           </Card.Content>
           <Card.Content>
-                <p>
-                <Button primary disabled={loading} onClick={() => downloadIcal()}>
-                  Download as iCal/ICS
-                </Button>
-                </p>
-              </Card.Content>
-              </Card>
+            <p>
+              <Button primary disabled={loading} onClick={() => downloadIcal()}>
+                Download as iCal/ICS
+              </Button>
+            </p>
+          </Card.Content>
+          <Card.Content>
+          <Header>Unstaked HEX</Header>
+          <Segment loading={hexBalancesLoading} basic style={{ padding: '1em 0em' }}>
+            { hexBalancesLoading || hexBalances === null || hexPriceUsd === null ?
+              'Loading...' :
+              <>
+              <Table basic='very'>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.HeaderCell>Account</Table.HeaderCell>
+                    <Table.HeaderCell>Amount<small> (HEX)</small></Table.HeaderCell>
+                    <Table.HeaderCell><small>(USD)</small></Table.HeaderCell>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {hexBalances.filter(({ balance }) => balance > 0).map(({ address, balance }) => <Table.Row key={address}>
+                        <Table.Cell><Label><ShortAddr address={address} /></Label></Table.Cell>
+                        <Table.Cell>{formatHearts(balance)}</Table.Cell>
+                        <Table.Cell>{formatUSD(balance / 1e8 * hexPriceUsd)}</Table.Cell>
+                    </Table.Row>)}
+                  <SummaryRow key={"summary"} stakes={stakes} hexPriceUsd={hexPriceUsd} />
+                </Table.Body>
+                </Table>
+              </> }
+          </Segment>
+          </Card.Content>
+            </Card>
 
           : null }
         <Segment>
