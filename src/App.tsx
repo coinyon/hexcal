@@ -56,11 +56,25 @@ const ShortAddr: React.FC<{ address: string }> = ({ address }) => {
   return <span>{address.slice(0, 6) + "..." + address.slice(38)}</span>
 }
 
+const AddressLabel: React.FC<{ address: string, onDelete?: (address: string) => void }> = ({ address, onDelete }) => {
+  const onDeleteClick = React.useCallback(() => {
+    if (onDelete && address) {
+      onDelete(address)
+    }
+  }, [ address, onDelete ])
+  // TODO: show tooltip
+  // TODO: add option to open etherscan
+  return <Label>
+    <ShortAddr address={address} />
+    { onDelete ? <Icon name='delete' onClick={onDeleteClick} /> : null }
+  </Label>
+}
+
 const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment, hexPriceUsd: number | null }> = ({ stake, hexPriceUsd }) => {
   return (
     <Table.Row key={stake.stakeId}>
       <Table.Cell textAlign="right">{stake.stakeId}</Table.Cell>
-      <Table.Cell><Label><ShortAddr address={stake.address} /></Label></Table.Cell>
+      <Table.Cell><AddressLabel address={stake.address} /></Table.Cell>
       <Table.Cell>{stake.unlockDay.calendar()}</Table.Cell>
       <Table.Cell>{stake.unlockDay.fromNow()}</Table.Cell>
       <Table.Cell textAlign="right">{formatHearts(stake.stakedHearts)}</Table.Cell>
@@ -223,6 +237,11 @@ Please donate if you found this useful.`
 
   const currentDay = moment();
 
+  // Callbacks
+  const removeAccount = React.useCallback((acc) => {
+    setAccounts(reject(equals(acc))(accounts))
+  }, [ accounts, setAccounts ])
+
   return (
     <Grid textAlign='center' style={{ height: '100vh' }} verticalAlign='middle' className="App">
       <Grid.Column style={{ maxWidth: '630px' }}>
@@ -259,11 +278,7 @@ Please donate if you found this useful.`
         {(active && account) ?
           <Card fluid>
             <Card.Content>
-            { accounts.map((acc) =>
-              <Label key={acc}>
-                <ShortAddr address={acc} />
-                <Icon name='delete' onClick={() => setAccounts(reject(equals(acc))(accounts))} />
-              </Label>) }
+            { accounts.map((acc) => <AddressLabel key={acc} address={acc} onDelete={removeAccount} />) }
             <Modal
               trigger={
                 <Button size="mini" onClick={() => setAddDialogOpen(true)}>
@@ -340,7 +355,7 @@ Please donate if you found this useful.`
                 </Table.Header>
                 <Table.Body>
                   {hexBalances.filter(({ balance }) => balance > 0).map(({ address, balance }) => <Table.Row key={address}>
-                        <Table.Cell><Label><ShortAddr address={address} /></Label></Table.Cell>
+                        <Table.Cell><AddressLabel address={address} /></Table.Cell>
                         <Table.Cell textAlign="right">{formatHearts(balance)}</Table.Cell>
                         <Table.Cell textAlign="right">{formatUSD(balance / 1e8 * hexPriceUsd)}</Table.Cell>
                     </Table.Row>)}
