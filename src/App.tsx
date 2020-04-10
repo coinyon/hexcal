@@ -7,7 +7,7 @@ import * as UNISWAP_HEX from './library/UNISWAP_HEX';
 import * as MAKER_ETHUSD from './library/MAKER_ETHUSD';
 import moment from 'moment';
 import ical from 'ical-generator';
-import { flatten, sort, reject, equals } from 'ramda';
+import { sum, map, prop, flatten, sort, reject, equals } from 'ramda';
 import download from 'downloadjs';
 import { Modal, Input, Button, Form, Grid, Label, Icon, Header, Image, Table, Card, Segment } from 'semantic-ui-react'
 import { useHashAccountsStore } from "./AccountStore"
@@ -341,10 +341,14 @@ Please donate if you found this useful.`
                 <Table.Body>
                   {hexBalances.filter(({ balance }) => balance > 0).map(({ address, balance }) => <Table.Row key={address}>
                         <Table.Cell><Label><ShortAddr address={address} /></Label></Table.Cell>
-                        <Table.Cell>{formatHearts(balance)}</Table.Cell>
-                        <Table.Cell>{formatUSD(balance / 1e8 * hexPriceUsd)}</Table.Cell>
+                        <Table.Cell textAlign="right">{formatHearts(balance)}</Table.Cell>
+                        <Table.Cell textAlign="right">{formatUSD(balance / 1e8 * hexPriceUsd)}</Table.Cell>
                     </Table.Row>)}
-                  <SummaryRow key={"summary"} stakes={stakes} hexPriceUsd={hexPriceUsd} />
+                    <Table.Row key={"summary"}>
+                      <Table.Cell></Table.Cell>
+                      <Table.Cell textAlign="right">{formatHearts(sum(map(prop("balance"), hexBalances)))}</Table.Cell>
+                      <Table.Cell textAlign="right">{formatUSD(sum(map(prop("balance"), hexBalances)) / 1e8 * hexPriceUsd)}</Table.Cell>
+                    </Table.Row>
                 </Table.Body>
                 </Table>
               </> }
