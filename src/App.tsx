@@ -255,11 +255,11 @@ Please donate if you found this useful.`
           <>
           <Segment placeholder>
             <p>
-              HEXCAL allows you to add the unlock days of your <a className="App-link" href={"https://go.hex.win/?r=" + referalAddr} target='_blank'>HEX</a> stakes to your calendar.
+              HEXCAL allows you to add the unlock days of your <a className="App-link" href={"https://go.hex.win/?r=" + referalAddr} target='_blank' rel="noopener noreferrer">HEX</a> stakes to your calendar.
             </p>
             <p style={{ textAlign: "left" }}>
             <ul>
-              <li>See your stakes' unlock days and principal in <a className="App-link" href={"https://go.hex.win/?r=" + referalAddr} target='_blank'>HEX</a> and USD</li>
+              <li>See your stakes' unlock days and principal in HEX and USD</li>
               <li>Add as many ETH addresses as you want</li>
               <li>Download an iCAL/ICS file to import the unlock days into your calendar app</li>
               <li>Privacy-friendly: No cookies, no tracking, only Web3-communication</li>
@@ -378,6 +378,7 @@ Please donate if you found this useful.`
         <a
           className="App-link"
           target="_blank"
+          rel="noopener noreferrer"
           href={"https://go.hex.win/?r=" + referalAddr}
         >
           <img src={hexagon} alt="HEX" height="17em" width="17em" />
