@@ -9,7 +9,7 @@ import moment from 'moment';
 import ical from 'ical-generator';
 import { sum, map, prop, flatten, sort, reject, equals, range } from 'ramda';
 import download from 'downloadjs';
-import { Modal, Input, Button, Form, Grid, Label, Icon, Header, Image, Table, Card, Segment } from 'semantic-ui-react'
+import { Modal, Input, Button, Form, Grid, Label, Icon, Header, Image, Table, Card, Segment, Popup } from 'semantic-ui-react'
 import { useHashAccountsStore } from "./AccountStore"
 
 import logo from './logo.png';
@@ -90,8 +90,9 @@ const SummaryRows: React.FC<{
   stakes: Stake[],
   hexPriceUsd: number | null,
   totalInterestHearts: number | null,
-  totalUnstakedHearts: number | null
-}> = ({ stakes, hexPriceUsd, totalInterestHearts, totalUnstakedHearts }) => {
+  totalUnstakedHearts: number | null,
+  unstackedTable: React.ReactElement
+}> = ({ stakes, hexPriceUsd, totalInterestHearts, totalUnstakedHearts, unstackedTable }) => {
   const stakedHearts = stakes.map((st) => st.stakedHearts).reduce((a, b) => a + b, 0)
   const totalHearts = stakedHearts + (totalInterestHearts || 0)
   return <>
@@ -108,7 +109,14 @@ const SummaryRows: React.FC<{
       </Table.Row> }
     { totalUnstakedHearts !== null &&
       <Table.Row key={"summaryUnstaked"}>
-        <Table.Cell textAlign="left" colSpan={4}>+ Total unstaked</Table.Cell>
+        <Table.Cell textAlign="left" colSpan={4}>
+          +
+          {" "}
+          <Popup
+            content={unstackedTable}
+            trigger={<span className='popup-trigger'>Total unstaked</span>}
+          />
+        </Table.Cell>
         <Table.Cell textAlign="right">{formatHearts(totalUnstakedHearts)}</Table.Cell>
         <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(totalUnstakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
       </Table.Row> }
@@ -306,6 +314,34 @@ Please donate if you found this useful.`
     setAccounts(reject(equals(acc))(accounts))
   }, [ accounts, setAccounts ])
 
+  const unstackedTable = React.useMemo(() => {
+    return totalUnstakedHearts === null || hexBalances === null || hexPriceUsd === null ?
+              <div>Loading...</div> :
+              <>
+              <Table basic='very'>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.HeaderCell>Account</Table.HeaderCell>
+                    <Table.HeaderCell>Amount<small> (HEX)</small></Table.HeaderCell>
+                    <Table.HeaderCell><small>(USD)</small></Table.HeaderCell>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {hexBalances.filter(({ balance }) => balance > 0).map(({ address, balance }) => <Table.Row key={address}>
+                        <Table.Cell><AddressLabel address={address} /></Table.Cell>
+                        <Table.Cell textAlign="right">{formatHearts(balance)}</Table.Cell>
+                        <Table.Cell textAlign="right">{formatUSD(balance / 1e8 * hexPriceUsd)}</Table.Cell>
+                    </Table.Row>)}
+                    <Table.Row key={"summary"}>
+                      <Table.Cell></Table.Cell>
+                      <Table.Cell textAlign="right">{formatHearts(totalUnstakedHearts)}</Table.Cell>
+                      <Table.Cell textAlign="right">{formatUSD(totalUnstakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
+                    </Table.Row>
+                </Table.Body>
+                </Table>
+              </>
+  }, [ hexBalances, hexPriceUsd, totalUnstakedHearts ])
+
   return (
     <Grid textAlign='center' style={{ height: '100vh' }} verticalAlign='middle' className="App">
       <Grid.Column style={{ maxWidth: '630px' }}>
@@ -402,6 +438,7 @@ Please donate if you found this useful.`
                     hexPriceUsd={hexPriceUsd}
                     totalUnstakedHearts={totalUnstakedHearts}
                     totalInterestHearts={totalInterestHearts}
+                    unstackedTable={unstackedTable}
                   />
                 </Table.Body>
                 </Table>
@@ -415,37 +452,7 @@ Please donate if you found this useful.`
               </Button>
             </p>
           </Card.Content>
-          <Card.Content>
-          <Header>Unstaked HEX</Header>
-          <Segment loading={hexBalancesLoading} basic style={{ padding: '1em 0em' }}>
-            { hexBalancesLoading || hexBalances === null || hexPriceUsd === null ?
-              'Loading...' :
-              <>
-              <Table basic='very'>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.HeaderCell>Account</Table.HeaderCell>
-                    <Table.HeaderCell>Amount<small> (HEX)</small></Table.HeaderCell>
-                    <Table.HeaderCell><small>(USD)</small></Table.HeaderCell>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {hexBalances.filter(({ balance }) => balance > 0).map(({ address, balance }) => <Table.Row key={address}>
-                        <Table.Cell><AddressLabel address={address} /></Table.Cell>
-                        <Table.Cell textAlign="right">{formatHearts(balance)}</Table.Cell>
-                        <Table.Cell textAlign="right">{formatUSD(balance / 1e8 * hexPriceUsd)}</Table.Cell>
-                    </Table.Row>)}
-                    <Table.Row key={"summary"}>
-                      <Table.Cell></Table.Cell>
-                      <Table.Cell textAlign="right">{formatHearts(totalUnstakedHearts)}</Table.Cell>
-                      <Table.Cell textAlign="right">{formatUSD(totalUnstakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
-                    </Table.Row>
-                </Table.Body>
-                </Table>
-              </> }
-          </Segment>
-          </Card.Content>
-            </Card>
+        </Card>
 
           : null }
         <Segment>
