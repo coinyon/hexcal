@@ -7,7 +7,7 @@ import * as UNISWAP_HEX from './library/UNISWAP_HEX';
 import * as MAKER_ETHUSD from './library/MAKER_ETHUSD';
 import moment from 'moment';
 import ical from 'ical-generator';
-import { sum, map, prop, flatten, sort, reject, equals } from 'ramda';
+import { sum, map, prop, flatten, sort, reject, equals, range } from 'ramda';
 import download from 'downloadjs';
 import { Modal, Input, Button, Form, Grid, Label, Icon, Header, Image, Table, Card, Segment } from 'semantic-ui-react'
 import { useHashAccountsStore } from "./AccountStore"
@@ -16,6 +16,7 @@ import logo from './logo.png';
 import hexagon from './hexagon.svg';
 import './App.css';
 import 'semantic-ui-css/semantic.min.css'
+import BigNumber from 'bignumber.js';
 
 const injected = new InjectedConnector({ supportedChainIds: [1] })
 const referalAddr = '0xFa2C0AbdaeDc8099887914Ab25AD11B3846655B9'
@@ -39,6 +40,8 @@ interface HexBalance {
   address: string;
   balance: number;
 }
+
+type DailyInterest = {[ day: number ]: number}
 
 const momentForDay = (day: number): moment.Moment => {
   return hexLaunchDay.clone().add(day - 1, "days")
@@ -83,18 +86,38 @@ const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment, hexPriceUsd:
   );
 }
 
-const SummaryRow: React.FC<{ stakes: Stake[], hexPriceUsd: number | null }> = ({ stakes, hexPriceUsd }) => {
-  const totalHearts = stakes.map((st) => st.stakedHearts).reduce((a, b) => a + b, 0)
-  return (
+const SummaryRows: React.FC<{
+  stakes: Stake[],
+  hexPriceUsd: number | null,
+  totalInterestHearts: number | null,
+  totalUnstakedHearts: number | null
+}> = ({ stakes, hexPriceUsd, totalInterestHearts, totalUnstakedHearts }) => {
+  const stakedHearts = stakes.map((st) => st.stakedHearts).reduce((a, b) => a + b, 0)
+  const totalHearts = stakedHearts + (totalInterestHearts || 0)
+  return <>
+    <Table.Row key={"summaryStakes"}>
+      <Table.Cell textAlign="left" colSpan={4}>Total staked principal</Table.Cell>
+      <Table.Cell textAlign="right">{formatHearts(stakedHearts)}</Table.Cell>
+      <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(stakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
+    </Table.Row>
+    { totalInterestHearts !== null &&
+      <Table.Row key={"summaryInterest"}>
+        <Table.Cell textAlign="left" colSpan={4}>+ Interest to date</Table.Cell>
+        <Table.Cell textAlign="right">{formatHearts(totalInterestHearts)}</Table.Cell>
+        <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(totalInterestHearts / 1e8 * hexPriceUsd)}</Table.Cell>
+      </Table.Row> }
+    { totalUnstakedHearts !== null &&
+      <Table.Row key={"summaryUnstaked"}>
+        <Table.Cell textAlign="left" colSpan={4}>+ Total unstaked</Table.Cell>
+        <Table.Cell textAlign="right">{formatHearts(totalUnstakedHearts)}</Table.Cell>
+        <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(totalUnstakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
+      </Table.Row> }
     <Table.Row key={"summary"}>
-      <Table.Cell textAlign="right"></Table.Cell>
-      <Table.Cell></Table.Cell>
-      <Table.Cell></Table.Cell>
-      <Table.Cell></Table.Cell>
+      <Table.Cell textAlign="left" colSpan={4}>= Total</Table.Cell>
       <Table.Cell textAlign="right">{formatHearts(totalHearts)}</Table.Cell>
       <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(totalHearts / 1e8 * hexPriceUsd)}</Table.Cell>
     </Table.Row>
-  );
+  </>;
 }
 
 function useContract<T>(web3react: any, abi: any, address: string, func: (contract: any, libary: Web3) => Promise<T>): [T | null, boolean] {
@@ -235,6 +258,47 @@ Please donate if you found this useful.`
     }
   }, [account, library, accounts, setAccounts]);
 
+  const [lastDay, _lastDayLoading] = useContract<number>(
+    web3react, HEX.abi, HEX.address, React.useCallback(async (contract) => {
+      let globalInfo = await contract.methods.globalInfo().call();
+      const lastDay = globalInfo[4];
+      return Number.parseInt(lastDay);
+    }, []) // Here we could add the current hour or so so that it gets updated
+  )
+
+  const [dailyInterest, _dailyInterestLoading] = useContract<DailyInterest | null>(
+    web3react, HEX.abi, HEX.address, React.useCallback(async (contract, library) => {
+      console.log(stakes.map((st) => st.lockedDay))
+      const minDay = stakes.reduce<number>((day, stake) => Math.min(day, stake.lockedDay), Infinity)
+      if (minDay !== Infinity && lastDay) {
+        // Here we could use "useMemo" so that the daily data is only loaded when date range
+        // is outside the currently loaded DailyInterest
+        // console.log("Stakes updated, ... loading daily data...from", minDay, "to", lastDay)
+        const encodedDailyData = await contract.methods.dailyDataRange(minDay, lastDay).call()
+        const interest: DailyInterest = []
+        encodedDailyData.forEach((encodedDayData: string, index: number) => {
+          const dailyBytes = library.utils.hexToBytes(library.utils.numberToHex(encodedDayData))
+          const payout = new BigNumber(library.utils.bytesToHex(dailyBytes.slice(-9)))
+          const shares = new BigNumber(library.utils.bytesToHex(dailyBytes.slice(-18, -9)))
+          interest[minDay + index] = payout.dividedBy(shares).toNumber()
+        })
+        return interest
+      }
+      return null
+    }, [ stakes, lastDay ]))
+
+  const totalInterestHearts = React.useMemo(() => {
+    if (stakes !== null && dailyInterest !== null && lastDay !== null) {
+      return sum(stakes.map((st) => {
+        return sum(map((day) => dailyInterest[day] * st.stakeShares, range(st.lockedDay, lastDay)))
+      }))
+    } else {
+      return null
+    }
+  }, [ stakes, dailyInterest, lastDay ])
+
+  const totalUnstakedHearts = React.useMemo(() => sum(map(prop("balance"), hexBalances || [])), [ hexBalances ])
+
   const currentDay = moment();
 
   // Callbacks
@@ -325,8 +389,20 @@ Please donate if you found this useful.`
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {sortedStakes.map((stake: Stake) => <StakeRow key={stake.stakeId} stake={stake} currentDay={currentDay} hexPriceUsd={hexPriceUsd} />)}
-                  <SummaryRow key={"summary"} stakes={stakes} hexPriceUsd={hexPriceUsd} />
+                  {sortedStakes.map((stake: Stake) => (
+                    <StakeRow
+                      key={stake.stakeId}
+                      stake={stake}
+                      currentDay={currentDay}
+                      hexPriceUsd={hexPriceUsd}
+                    />
+                  ))}
+                  <SummaryRows
+                    stakes={stakes}
+                    hexPriceUsd={hexPriceUsd}
+                    totalUnstakedHearts={totalUnstakedHearts}
+                    totalInterestHearts={totalInterestHearts}
+                  />
                 </Table.Body>
                 </Table>
               </> }
@@ -361,8 +437,8 @@ Please donate if you found this useful.`
                     </Table.Row>)}
                     <Table.Row key={"summary"}>
                       <Table.Cell></Table.Cell>
-                      <Table.Cell textAlign="right">{formatHearts(sum(map(prop("balance"), hexBalances)))}</Table.Cell>
-                      <Table.Cell textAlign="right">{formatUSD(sum(map(prop("balance"), hexBalances)) / 1e8 * hexPriceUsd)}</Table.Cell>
+                      <Table.Cell textAlign="right">{formatHearts(totalUnstakedHearts)}</Table.Cell>
+                      <Table.Cell textAlign="right">{formatUSD(totalUnstakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
                     </Table.Row>
                 </Table.Body>
                 </Table>
