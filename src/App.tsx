@@ -169,23 +169,23 @@ const App: React.FC = (_props) => {
   // Refs
   const addrInput = React.useRef<Input>() as any;
 
-  const [hexPriceEth, hexPriceEthLoading] = useContract<number>(web3react, UNISWAP_HEX.abi, UNISWAP_HEX.address, React.useCallback(async (contract) => {
+  const [hexPriceEth] = useContract<number>(web3react, UNISWAP_HEX.abi, UNISWAP_HEX.address, React.useCallback(async (contract) => {
     const theorethicalSellAmount = 1000;
     const theorethicalEthAmount = await contract.methods.getTokenToEthInputPrice(theorethicalSellAmount).call()
     return (theorethicalEthAmount / theorethicalSellAmount) / 10e9 // from Gwei
   }, []))
 
-  const [ethPriceUsd, ethPriceUsdLoading] = useContract<number>(web3react, MAKER_ETHUSD.abi, MAKER_ETHUSD.address, React.useCallback(async (contract, library) => {
+  const [ethPriceUsd] = useContract<number>(web3react, MAKER_ETHUSD.abi, MAKER_ETHUSD.address, React.useCallback(async (contract, library) => {
     const resultWei = await contract.methods.read().call()
     return parseFloat(library.utils.fromWei(resultWei))
   }, []))
 
-  const [hexBalances, hexBalancesLoading] = useContract<HexBalance[]>(web3react, HEX.abi, HEX.address, React.useCallback(async (contract) => {
+  const [hexBalances] = useContract<HexBalance[]>(web3react, HEX.abi, HEX.address, React.useCallback(async (contract) => {
     const balances = await Promise.all(accounts.map((acc) => contract.methods.balanceOf(acc).call()))
     return balances.map((balance, index) => ({ address: accounts[index], balance }))
   }, [ accounts ]))
 
-  const hexPriceUsd = (!ethPriceUsdLoading && !hexPriceEthLoading && hexPriceEth !== null && ethPriceUsd !== null) ? hexPriceEth * ethPriceUsd : null
+  const hexPriceUsd = (hexPriceEth !== null && ethPriceUsd !== null) ? hexPriceEth * ethPriceUsd : null
 
   //;(window as any).web3 = web3react.library
 
@@ -266,7 +266,7 @@ Please donate if you found this useful.`
     }
   }, [account, library, accounts, setAccounts]);
 
-  const [lastDay, _lastDayLoading] = useContract<number>(
+  const [lastDay] = useContract<number>(
     web3react, HEX.abi, HEX.address, React.useCallback(async (contract) => {
       let globalInfo = await contract.methods.globalInfo().call();
       const lastDay = globalInfo[4];
@@ -274,7 +274,7 @@ Please donate if you found this useful.`
     }, []) // Here we could add the current hour or so so that it gets updated
   )
 
-  const [dailyInterest, _dailyInterestLoading] = useContract<DailyInterest | null>(
+  const [dailyInterest] = useContract<DailyInterest | null>(
     web3react, HEX.abi, HEX.address, React.useCallback(async (contract, library) => {
       console.log(stakes.map((st) => st.lockedDay))
       const minDay = stakes.reduce<number>((day, stake) => Math.min(day, stake.lockedDay), Infinity)
@@ -316,7 +316,8 @@ Please donate if you found this useful.`
 
   const unstackedTable = React.useMemo(() => {
     return totalUnstakedHearts === null || hexBalances === null || hexPriceUsd === null ?
-              <div>Loading...</div> :
+              <div>Loading...</div> : (totalUnstakedHearts === 0 ?
+                                    <div>No unstaked HEX present in your accounts.</div> :
               <>
               <Table basic='very'>
                 <Table.Header>
@@ -339,7 +340,7 @@ Please donate if you found this useful.`
                     </Table.Row>
                 </Table.Body>
                 </Table>
-              </>
+              </>)
   }, [ hexBalances, hexPriceUsd, totalUnstakedHearts ])
 
   return (
@@ -359,8 +360,8 @@ Please donate if you found this useful.`
             </p>
             <p style={{ textAlign: "left" }}>
             <ul>
-              <li>See your stakes' unlock days and principal in HEX and USD</li>
               <li>Add as many ETH addresses as you want</li>
+              <li>See your stakes' unlock days, principal and interest in HEX and USD</li>
               <li>Download an iCAL/ICS file to import the unlock days into your calendar app</li>
               <li>Privacy-friendly: No cookies, no tracking, only Web3-communication</li>
               <li>Open Source</li>
@@ -408,7 +409,20 @@ Please donate if you found this useful.`
             </Modal>
           </Card.Content>
           <Card.Content>
-          <Header>Open HEX stakes</Header>
+          <Header>
+            <Grid columns='two'>
+              <Grid.Row>
+                <Grid.Column textAlign="left">
+                  Open HEX stakes
+                </Grid.Column>
+                <Grid.Column textAlign="right">
+                  <Button primary disabled={loading} onClick={() => downloadIcal()} fitted>
+                    <Icon name="download" /> Download as iCal/ICS
+                  </Button>
+                </Grid.Column>
+              </Grid.Row>
+            </Grid>
+          </Header>
           <Segment loading={loading} basic style={{ padding: '1em 0em' }}>
             { loading ?
               'Loading...' :
@@ -444,13 +458,6 @@ Please donate if you found this useful.`
                 </Table>
               </> }
           </Segment>
-          </Card.Content>
-          <Card.Content>
-            <p>
-              <Button primary disabled={loading} onClick={() => downloadIcal()}>
-                Download as iCal/ICS
-              </Button>
-            </p>
           </Card.Content>
         </Card>
 
