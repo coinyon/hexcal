@@ -1,6 +1,6 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "dff51586f388fa757932e0c175480897",
+    "revision": "68aa80bb057c2f7d91d78d8df81405ca",
     "url": "/hexcal/index.html"
   },
   {
@@ -8,7 +8,7 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/hexcal/static/css/2.03cd33ec.chunk.css"
   },
   {
-    "revision": "4b0562ef0479c47d7db1",
+    "revision": "ced81683435551003ceb",
     "url": "/hexcal/static/css/main.61fc28dd.chunk.css"
   },
   {
@@ -20,8 +20,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/hexcal/static/js/2.3d164397.chunk.js.LICENSE.txt"
   },
   {
-    "revision": "4b0562ef0479c47d7db1",
-    "url": "/hexcal/static/js/main.a3cb652a.chunk.js"
+    "revision": "ced81683435551003ceb",
+    "url": "/hexcal/static/js/main.2f073f60.chunk.js"
   },
   {
     "revision": "996fb712bab7f751e027",
