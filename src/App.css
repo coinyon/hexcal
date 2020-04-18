@@ -54,3 +54,7 @@
   border-bottom: 1px dotted black;
   cursor: pointer;
 }
+
+.App tr.warning td.date-related {
+  font-weight: bold;
+}

@@ -73,13 +73,15 @@ const AddressLabel: React.FC<{ address: string, onDelete?: (address: string) => 
   </Label>
 }
 
-const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment, hexPriceUsd: number | null }> = ({ stake, hexPriceUsd }) => {
+const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment, hexPriceUsd: number | null }> = ({
+  stake, hexPriceUsd, currentDay
+}) => {
   return (
-    <Table.Row key={stake.stakeId}>
+    <Table.Row key={stake.stakeId} warning={stake.unlockDay.diff(currentDay, "days") < 32}>
       <Table.Cell textAlign="right">{stake.stakeId}</Table.Cell>
       <Table.Cell><AddressLabel address={stake.address} /></Table.Cell>
-      <Table.Cell>{stake.unlockDay.calendar()}</Table.Cell>
-      <Table.Cell>{stake.unlockDay.fromNow()}</Table.Cell>
+      <Table.Cell className="date-related">{stake.unlockDay.calendar()}</Table.Cell>
+      <Table.Cell className="date-related">{stake.unlockDay.fromNow()}</Table.Cell>
       <Table.Cell textAlign="right">{formatHearts(stake.stakedHearts)}</Table.Cell>
       <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(stake.stakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
     </Table.Row>
