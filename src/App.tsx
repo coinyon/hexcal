@@ -194,8 +194,6 @@ const App: React.FC = (_props) => {
     }, [], updateInterval)
   )
 
-  console.log(hexPriceEth, ethPriceUsd)
-
   const [hexBalances] = useContract<HexBalance[]>(web3react, HEX.abi, HEX.address, React.useCallback(async (contract) => {
     const balances = await Promise.all(accounts.map((acc) => contract.methods.balanceOf(acc).call()))
     return balances.map((balance, index) => ({ address: accounts[index], balance }))
@@ -295,7 +293,6 @@ Please donate if you found this useful.`
 
   const [dailyInterest] = useContract<DailyInterest | null>(
     web3react, HEX.abi, HEX.address, React.useCallback(async (contract, library) => {
-      console.log(stakes.map((st) => st.lockedDay))
       const minDay = stakes.reduce<number>((day, stake) => Math.min(day, stake.lockedDay), Infinity)
       if (minDay !== Infinity && lastDay) {
         // Here we could use "useMemo" so that the daily data is only loaded when date range
