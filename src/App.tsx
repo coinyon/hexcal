@@ -17,12 +17,14 @@ import hexagon from './hexagon.svg';
 import './App.css';
 import 'semantic-ui-css/semantic.min.css'
 import BigNumber from 'bignumber.js';
+import { useCallbackWithInterval } from './interval';
 
 const injected = new InjectedConnector({ supportedChainIds: [1] })
 const referalAddr = '0xFa2C0AbdaeDc8099887914Ab25AD11B3846655B9'
 const iCalDomain = 'coinyon.github.io'
 const iCalProdId = '//' + iCalDomain + '//HEXCAL//EN'
 const hexLaunchDay = moment("20191203", "YYYYMMDD")
+const updateInterval = 30_000
 
 interface Stake {
   stakeId: number;
@@ -171,16 +173,28 @@ const App: React.FC = (_props) => {
   // Refs
   const addrInput = React.useRef<Input>() as any;
 
-  const [hexPriceEth] = useContract<number>(web3react, UNISWAP_HEX.abi, UNISWAP_HEX.address, React.useCallback(async (contract) => {
-    const theorethicalSellAmount = 1000;
-    const theorethicalEthAmount = await contract.methods.getTokenToEthInputPrice(theorethicalSellAmount).call()
-    return (theorethicalEthAmount / theorethicalSellAmount) / 10e9 // from Gwei
-  }, []))
+  const [hexPriceEth] = useContract<number>(
+    web3react,
+    UNISWAP_HEX.abi,
+    UNISWAP_HEX.address,
+    useCallbackWithInterval(async (contract) => {
+      const theorethicalSellAmount = 1000;
+      const theorethicalEthAmount = await contract.methods.getTokenToEthInputPrice(theorethicalSellAmount).call()
+      return (theorethicalEthAmount / theorethicalSellAmount) / 10e9 // from Gwei
+    }, [], updateInterval)
+  )
 
-  const [ethPriceUsd] = useContract<number>(web3react, MAKER_ETHUSD.abi, MAKER_ETHUSD.address, React.useCallback(async (contract, library) => {
-    const resultWei = await contract.methods.read().call()
-    return parseFloat(library.utils.fromWei(resultWei))
-  }, []))
+  const [ethPriceUsd] = useContract<number>(
+    web3react,
+    MAKER_ETHUSD.abi,
+    MAKER_ETHUSD.address,
+    useCallbackWithInterval(async (contract, library) => {
+      const resultWei = await contract.methods.read().call()
+      return parseFloat(library.utils.fromWei(resultWei))
+    }, [], updateInterval)
+  )
+
+  console.log(hexPriceEth, ethPriceUsd)
 
   const [hexBalances] = useContract<HexBalance[]>(web3react, HEX.abi, HEX.address, React.useCallback(async (contract) => {
     const balances = await Promise.all(accounts.map((acc) => contract.methods.balanceOf(acc).call()))
@@ -269,11 +283,14 @@ Please donate if you found this useful.`
   }, [account, library, accounts, setAccounts]);
 
   const [lastDay] = useContract<number>(
-    web3react, HEX.abi, HEX.address, React.useCallback(async (contract) => {
+    web3react,
+    HEX.abi,
+    HEX.address,
+    useCallbackWithInterval(async (contract) => {
       let globalInfo = await contract.methods.globalInfo().call();
       const lastDay = globalInfo[4];
       return Number.parseInt(lastDay);
-    }, []) // Here we could add the current hour or so so that it gets updated
+    }, [], updateInterval)
   )
 
   const [dailyInterest] = useContract<DailyInterest | null>(
