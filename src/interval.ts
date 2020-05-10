@@ -17,6 +17,7 @@ export function useCallbackWithInterval<T extends ArbitraryFunction>(callback: T
         return () => clearInterval(id);
       }
     },
+    // eslint-disable-next-line
     [...deps, delay]
   )
 
