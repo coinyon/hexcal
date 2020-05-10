@@ -98,7 +98,7 @@ const SummaryRows: React.FC<{
   unstackedTable: React.ReactElement
 }> = ({ stakes, hexPriceUsd, totalInterestHearts, totalUnstakedHearts, unstackedTable }) => {
   const stakedHearts = stakes.map((st) => st.stakedHearts).reduce((a, b) => a + b, 0)
-  const totalHearts = stakedHearts + (totalInterestHearts || 0)
+  const totalHearts = stakedHearts + (totalInterestHearts || 0) + (totalUnstakedHearts || 0)
   return <>
     <Table.Row key={"summaryStakes"}>
       <Table.Cell textAlign="left" colSpan={4}>Total staked principal</Table.Cell>
