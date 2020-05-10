@@ -264,7 +264,7 @@ Please donate if you found this useful.`
                   lockedDay,
                   unlockedDay,
                   isAutoStake: st.isAutoStake,
-                  unlockDay: momentForDay(lockedDay + stakedDays)
+                  unlockDay: momentForDay(lockedDay + stakedDays + 1)
                 }
               }))
             })
