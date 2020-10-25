@@ -21,5 +21,5 @@ export function useCallbackWithInterval<T extends ArbitraryFunction>(callback: T
     [...deps, delay]
   )
 
-  return useCallback(callback, [...deps, timer])
+  return useCallback(callback, [...deps, callback, timer])
 }
