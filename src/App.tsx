@@ -43,7 +43,7 @@ interface HexBalance {
   balance: number;
 }
 
-type DailyInterest = {[ day: number ]: number}
+type DailyData = {[ day: number ]: { interest: number, totalShares: BigNumber }}
 
 const momentForDay = (day: number): moment.Moment => {
   return hexLaunchDay.clone().add(day - 1, "days")
@@ -291,35 +291,78 @@ Please donate if you found this useful.`
     }, [], updateInterval)
   )
 
-  const [dailyInterest] = useContract<DailyInterest | null>(
+  const [dailyData] = useContract<DailyData | null>(
     web3react, HEX.abi, HEX.address, React.useCallback(async (contract, library) => {
       const minDay = stakes.reduce<number>((day, stake) => Math.min(day, stake.lockedDay), Infinity)
       if (minDay !== Infinity && lastDay) {
         // Here we could use "useMemo" so that the daily data is only loaded when date range
         // is outside the currently loaded DailyInterest
-        // console.log("Stakes updated, ... loading daily data...from", minDay, "to", lastDay)
-        const encodedDailyData = await contract.methods.dailyDataRange(minDay, lastDay).call()
-        const interest: DailyInterest = []
+        // console.log("Stakes updated, ... loading daily data...from", minDay - 1, "to", lastDay)
+        const encodedDailyData = await contract.methods.dailyDataRange(minDay - 1, lastDay).call()
+        const data: DailyData = []
         encodedDailyData.forEach((encodedDayData: string, index: number) => {
-          const dailyBytes = library.utils.hexToBytes(library.utils.numberToHex(encodedDayData))
+          const dailyBytes = library.utils.toBN(String(encodedDayData)).toArray("be", 25)
           const payout = new BigNumber(library.utils.bytesToHex(dailyBytes.slice(-9)))
           const shares = new BigNumber(library.utils.bytesToHex(dailyBytes.slice(-18, -9)))
-          interest[minDay + index] = payout.dividedBy(shares).toNumber()
+          data[minDay + index] = {
+            interest: payout.dividedBy(shares).toNumber(),
+            totalShares: shares
+          };
         })
-        return interest
+        return data
       }
       return null
     }, [ stakes, lastDay ]))
 
   const totalInterestHearts = React.useMemo(() => {
-    if (stakes !== null && dailyInterest !== null && lastDay !== null) {
+    if (stakes !== null && dailyData !== null && lastDay !== null) {
       return sum(stakes.map((st) => {
-        return sum(map((day) => dailyInterest[day] * st.stakeShares, range(st.lockedDay, lastDay)))
+        console.log(range(st.lockedDay + 1, lastDay + 1))
+        return sum(map((day) => dailyData[day].interest * st.stakeShares, range(st.lockedDay + 1, lastDay + 1)))
       }))
     } else {
       return null
     }
-  }, [ stakes, dailyInterest, lastDay ])
+  }, [ stakes, dailyData, lastDay ])
+
+  const currentTShares = React.useMemo(() => {
+    if (stakes !== null && dailyData !== null) {
+      return new BigNumber(sum(stakes.map((st) => st.stakeShares))).dividedBy(1e12).toNumber()
+    } else {
+      return null
+    }
+  }, [ stakes, dailyData ])
+
+  const totalTShares = React.useMemo(() => {
+    if (stakes !== null && dailyData !== null && lastDay !== null) {
+      return new BigNumber(dailyData[lastDay].totalShares).dividedBy(1e12).toNumber()
+    } else {
+      return null
+    }
+  }, [ stakes, dailyData, lastDay ])
+
+  const apy = React.useMemo(() => {
+    if (stakes !== null && dailyData !== null && lastDay !== null && totalInterestHearts !== null) {
+      const lastThreeDaysInterestHearts = sum(stakes.map((st) => {
+        return sum(map((day) => dailyData[day].interest * st.stakeShares, range(lastDay - 2, lastDay + 1)))
+      }))
+      const stakedHearts = stakes.map((st) => st.stakedHearts).reduce((a, b) => a + b, 0)
+      return lastThreeDaysInterestHearts / 3.0 / (stakedHearts + totalInterestHearts) * 365 * 100.0
+    } else {
+      return null
+    }
+  }, [ stakes, dailyData, lastDay, totalInterestHearts ])
+
+  const averageDailyInterestHearts = React.useMemo(() => {
+    if (stakes !== null && dailyData !== null && lastDay !== null) {
+      const lastThreeDaysInterestHearts = sum(stakes.map((st) => {
+        return sum(map((day) => dailyData[day].interest * st.stakeShares, range(lastDay - 2, lastDay + 1)))
+      }))
+      return lastThreeDaysInterestHearts / 3.0
+    } else {
+      return null
+    }
+  }, [ stakes, dailyData, lastDay ])
 
   const totalUnstakedHearts = React.useMemo(() => sum(map(prop("balance"), hexBalances || [])), [ hexBalances ])
 
@@ -477,6 +520,37 @@ Please donate if you found this useful.`
           </Card.Content>
         </Card>
 
+          : null }
+
+        {(active && account && hexPriceUsd != null && currentTShares !== null && apy !== null && totalTShares !== null && averageDailyInterestHearts !== null) ?
+        <Grid columns={3}>
+          <Grid.Column>
+            <Card>
+              <Card.Content>
+                <h4>Daily Interest</h4>
+                {(averageDailyInterestHearts / 1e8)?.toLocaleString(undefined, { maximumFractionDigits: 2 })} HEX<br />
+                {(averageDailyInterestHearts / 1e8 * hexPriceUsd)?.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+              </Card.Content>
+            </Card>
+          </Grid.Column>
+          <Grid.Column>
+            <Card>
+              <Card.Content>
+                <h4>APY</h4>
+                {(apy).toLocaleString(undefined, { maximumFractionDigits: 2 })} %
+              </Card.Content>
+            </Card>
+          </Grid.Column>
+          <Grid.Column>
+            <Card>
+              <Card.Content>
+                <h4>Pool Shares</h4>
+                {(currentTShares).toLocaleString(undefined, { maximumFractionDigits: 3 })} T<br />
+                ({(currentTShares / totalTShares * 100).toLocaleString(undefined, { maximumFractionDigits: 8 })} %)
+              </Card.Content>
+            </Card>
+          </Grid.Column>
+        </Grid>
           : null }
         <Segment>
         Made with
