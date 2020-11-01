@@ -317,7 +317,6 @@ Please donate if you found this useful.`
   const totalInterestHearts = React.useMemo(() => {
     if (stakes !== null && dailyData !== null && lastDay !== null) {
       return sum(stakes.map((st) => {
-        console.log(range(st.lockedDay + 1, lastDay + 1))
         return sum(map((day) => dailyData[day].interest * st.stakeShares, range(st.lockedDay + 1, lastDay + 1)))
       }))
     } else {
