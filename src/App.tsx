@@ -26,6 +26,25 @@ const iCalProdId = '//' + iCalDomain + '//HEXCAL//EN'
 const hexLaunchDay = moment("20191203", "YYYYMMDD")
 const updateInterval = 30_000
 
+// Some constants taken from the HEX contract
+const HEARTS_PER_HEX = 1e8;
+const HEX_PER_BTC = 1e4;
+const SATOSHIS_PER_BTC = 1e8;
+const HEARTS_PER_SATOSHI = HEARTS_PER_HEX / SATOSHIS_PER_BTC * HEX_PER_BTC;
+
+const PRE_CLAIM_DAYS = 1;
+const CLAIM_PHASE_START_DAY = PRE_CLAIM_DAYS;
+
+/* Length of claim phase */
+const CLAIM_PHASE_WEEKS = 50;
+const CLAIM_PHASE_DAYS = CLAIM_PHASE_WEEKS * 7;
+
+/* End of claim phase */
+const CLAIM_PHASE_END_DAY = CLAIM_PHASE_START_DAY + CLAIM_PHASE_DAYS;
+
+/* BigPayDay */
+const BIG_PAY_DAY = CLAIM_PHASE_END_DAY + 1;
+
 interface Stake {
   stakeId: number;
   stakedHearts: number;
@@ -43,14 +62,18 @@ interface HexBalance {
   balance: number;
 }
 
-type DailyData = {[ day: number ]: { interest: number, totalShares: BigNumber }}
+type DailyData = {[ day: number ]: {
+  interest: number,
+  bigPayDayPayout: number,
+  totalShares: BigNumber
+}}
 
 const momentForDay = (day: number): moment.Moment => {
   return hexLaunchDay.clone().add(day - 1, "days")
 }
 
 const formatHearts = (hearts: number): string => {
-  return (hearts / 1e8).toLocaleString([], { minimumFractionDigits: 3, maximumFractionDigits: 3 })
+  return (hearts / HEARTS_PER_HEX).toLocaleString([], { minimumFractionDigits: 3, maximumFractionDigits: 3 })
 }
 
 const formatUSD = (usd: number): string => {
@@ -85,7 +108,7 @@ const StakeRow: React.FC<{ stake: Stake, currentDay: moment.Moment, hexPriceUsd:
       <Table.Cell className="date-related">{stake.unlockDay.calendar()}</Table.Cell>
       <Table.Cell className="date-related">{stake.unlockDay.fromNow()}</Table.Cell>
       <Table.Cell textAlign="right">{formatHearts(stake.stakedHearts)}</Table.Cell>
-      <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(stake.stakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
+      <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(stake.stakedHearts / HEARTS_PER_HEX * hexPriceUsd)}</Table.Cell>
     </Table.Row>
   );
 }
@@ -95,21 +118,38 @@ const SummaryRows: React.FC<{
   hexPriceUsd: number | null,
   totalInterestHearts: number | null,
   totalUnstakedHearts: number | null,
+  bigPayDayPayout: number | null,
   unstackedTable: React.ReactElement
-}> = ({ stakes, hexPriceUsd, totalInterestHearts, totalUnstakedHearts, unstackedTable }) => {
+}> = ({
+  stakes,
+  hexPriceUsd,
+  totalInterestHearts,
+  totalUnstakedHearts,
+  bigPayDayPayout,
+  unstackedTable
+}) => {
   const stakedHearts = stakes.map((st) => st.stakedHearts).reduce((a, b) => a + b, 0)
-  const totalHearts = stakedHearts + (totalInterestHearts || 0) + (totalUnstakedHearts || 0)
+  const totalHearts = stakedHearts +
+    (totalInterestHearts || 0) +
+    (totalUnstakedHearts || 0) +
+    (bigPayDayPayout || 0)
   return <>
     <Table.Row key={"summaryStakes"}>
       <Table.Cell textAlign="left" colSpan={4}>Total staked principal</Table.Cell>
       <Table.Cell textAlign="right">{formatHearts(stakedHearts)}</Table.Cell>
-      <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(stakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
+      <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(stakedHearts / HEARTS_PER_HEX * hexPriceUsd)}</Table.Cell>
     </Table.Row>
     { totalInterestHearts !== null &&
       <Table.Row key={"summaryInterest"}>
         <Table.Cell textAlign="left" colSpan={4}>+ Interest to date</Table.Cell>
         <Table.Cell textAlign="right">{formatHearts(totalInterestHearts)}</Table.Cell>
-        <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(totalInterestHearts / 1e8 * hexPriceUsd)}</Table.Cell>
+        <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(totalInterestHearts / HEARTS_PER_HEX * hexPriceUsd)}</Table.Cell>
+      </Table.Row> }
+    { bigPayDayPayout !== null &&
+      <Table.Row key={"summaryBigPayDayPayout"}>
+        <Table.Cell textAlign="left" colSpan={4}>+ Big Pay Day payout</Table.Cell>
+        <Table.Cell textAlign="right">{formatHearts(bigPayDayPayout)}</Table.Cell>
+        <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(bigPayDayPayout / HEARTS_PER_HEX * hexPriceUsd)}</Table.Cell>
       </Table.Row> }
     { totalUnstakedHearts !== null &&
       <Table.Row key={"summaryUnstaked"}>
@@ -122,12 +162,12 @@ const SummaryRows: React.FC<{
           />
         </Table.Cell>
         <Table.Cell textAlign="right">{formatHearts(totalUnstakedHearts)}</Table.Cell>
-        <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(totalUnstakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
+        <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(totalUnstakedHearts / HEARTS_PER_HEX * hexPriceUsd)}</Table.Cell>
       </Table.Row> }
     <Table.Row key={"summary"}>
       <Table.Cell textAlign="left" colSpan={4}>= Total</Table.Cell>
       <Table.Cell textAlign="right">{formatHearts(totalHearts)}</Table.Cell>
-      <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(totalHearts / 1e8 * hexPriceUsd)}</Table.Cell>
+      <Table.Cell textAlign="right">{ hexPriceUsd != null && formatUSD(totalHearts / HEARTS_PER_HEX * hexPriceUsd)}</Table.Cell>
     </Table.Row>
   </>;
 }
@@ -304,8 +344,14 @@ Please donate if you found this useful.`
           const dailyBytes = library.utils.toBN(String(encodedDayData)).toArray("be", 25)
           const payout = new BigNumber(library.utils.bytesToHex(dailyBytes.slice(-9)))
           const shares = new BigNumber(library.utils.bytesToHex(dailyBytes.slice(-18, -9)))
-          data[minDay + index] = {
+          const unclaimedSatoshis = new BigNumber(library.utils.bytesToHex(dailyBytes.slice(-25, -18)))
+          const day = minDay + index
+          const isBigPayDay = day === BIG_PAY_DAY + 1  // BPD payout was one day after BIG_PAY_DAY
+          data[day] = {
             interest: payout.dividedBy(shares).toNumber(),
+            bigPayDayPayout: isBigPayDay ?
+              unclaimedSatoshis.multipliedBy(HEARTS_PER_SATOSHI).dividedBy(shares).toNumber() :
+              0,
             totalShares: shares
           };
         })
@@ -318,6 +364,17 @@ Please donate if you found this useful.`
     if (stakes !== null && dailyData !== null && lastDay !== null) {
       return sum(stakes.map((st) => {
         return sum(map((day) => dailyData[day].interest * st.stakeShares, range(st.lockedDay + 1, lastDay + 1)))
+      }))
+    } else {
+      return null
+    }
+  }, [ stakes, dailyData, lastDay ])
+
+  const bigPayDayPayout = React.useMemo(() => {
+    if (stakes !== null && dailyData !== null && lastDay !== null) {
+      return sum(stakes.map((st) => {
+        return sum(map((day) => dailyData[day].bigPayDayPayout * st.stakeShares,
+                       range(st.lockedDay + 1, lastDay + 1)))
       }))
     } else {
       return null
@@ -389,12 +446,12 @@ Please donate if you found this useful.`
                   {hexBalances.filter(({ balance }) => balance > 0).map(({ address, balance }) => <Table.Row key={address}>
                         <Table.Cell><AddressLabel address={address} /></Table.Cell>
                         <Table.Cell textAlign="right">{formatHearts(balance)}</Table.Cell>
-                        <Table.Cell textAlign="right">{formatUSD(balance / 1e8 * hexPriceUsd)}</Table.Cell>
+                        <Table.Cell textAlign="right">{formatUSD(balance / HEARTS_PER_HEX * hexPriceUsd)}</Table.Cell>
                     </Table.Row>)}
                     <Table.Row key={"summary"}>
                       <Table.Cell></Table.Cell>
                       <Table.Cell textAlign="right">{formatHearts(totalUnstakedHearts)}</Table.Cell>
-                      <Table.Cell textAlign="right">{formatUSD(totalUnstakedHearts / 1e8 * hexPriceUsd)}</Table.Cell>
+                      <Table.Cell textAlign="right">{formatUSD(totalUnstakedHearts / HEARTS_PER_HEX * hexPriceUsd)}</Table.Cell>
                     </Table.Row>
                 </Table.Body>
                 </Table>
@@ -510,6 +567,7 @@ Please donate if you found this useful.`
                     hexPriceUsd={hexPriceUsd}
                     totalUnstakedHearts={totalUnstakedHearts}
                     totalInterestHearts={totalInterestHearts}
+                    bigPayDayPayout={bigPayDayPayout}
                     unstackedTable={unstackedTable}
                   />
                 </Table.Body>
@@ -527,8 +585,8 @@ Please donate if you found this useful.`
             <Card>
               <Card.Content>
                 <h4>Daily Interest</h4>
-                {(averageDailyInterestHearts / 1e8)?.toLocaleString(undefined, { maximumFractionDigits: 2 })} HEX<br />
-                {(averageDailyInterestHearts / 1e8 * hexPriceUsd)?.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                {(averageDailyInterestHearts / HEARTS_PER_HEX)?.toLocaleString(undefined, { maximumFractionDigits: 2 })} HEX<br />
+                {(averageDailyInterestHearts / HEARTS_PER_HEX * hexPriceUsd)?.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
               </Card.Content>
             </Card>
           </Grid.Column>
