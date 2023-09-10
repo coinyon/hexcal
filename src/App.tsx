@@ -19,7 +19,7 @@ import 'semantic-ui-css/semantic.min.css'
 import BigNumber from 'bignumber.js';
 import { useCallbackWithInterval } from './interval';
 
-const injected = new InjectedConnector({ supportedChainIds: [1] })
+const injected = new InjectedConnector({ supportedChainIds: [1, 369] })
 const referalAddr = '0xFa2C0AbdaeDc8099887914Ab25AD11B3846655B9'
 const iCalDomain = 'coinyon.github.io'
 const iCalProdId = '//' + iCalDomain + '//HEXCAL//EN'
@@ -192,6 +192,16 @@ function useContract<T>(web3react: any, abi: any, address: string, func: (contra
 }
 
 const sortByUnlockDay = sort<Stake>((st1, st2) => st1.unlockDay.diff(st2.unlockDay))
+
+const NetworkBadge: React.FC<{ chainId: number | undefined }> = ({ chainId }) => {
+  if (chainId == 1) {
+    return <Label color="blue" size="large">Ethereum</Label>
+  } else if (chainId == 369) {
+    return <Label color="blue" size="large">PulseChain</Label>
+  } else {
+    return <Label color="grey" size="large">Unknown network</Label>
+  }
+}
 
 const App: React.FC = (_props) => {
 
@@ -475,6 +485,7 @@ Please donate if you found this useful.`
             </p>
             <p style={{ textAlign: "left" }}>
             <ul>
+              <li>Supported networks: Ethereum, PulseChain</li>
               <li>Add as many ETH addresses as you want</li>
               <li>See your stakes' unlock days, principal and interest in HEX and USD</li>
               <li>Download an iCAL/ICS file to import the unlock days into your calendar app</li>
@@ -528,7 +539,7 @@ Please donate if you found this useful.`
             <Grid columns='two'>
               <Grid.Row>
                 <Grid.Column textAlign="left">
-                  Open HEX stakes
+                  Open HEX stakes <NetworkBadge chainId={web3react.chainId} />
                 </Grid.Column>
                 <Grid.Column textAlign="right">
                   <Button primary disabled={loading} onClick={() => downloadIcal()} fitted>
