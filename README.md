@@ -9,6 +9,7 @@ HEXCAL allows you to add the unlock days of your HEX stakes to your calendar.
 ## Features
 
  * See your stakes' unlock days and principal in HEX and USD
+ * Supported networks: Ethereum, PulseChain
  * Add as many ETH addresses as you want</li>
  * Download an iCAL/ICS file to import the unlock days into your calendar app
  * Privacy-friendly: No cookies, no tracking, only Web3-communication
