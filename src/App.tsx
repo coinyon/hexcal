@@ -194,9 +194,9 @@ function useContract<T>(web3react: any, abi: any, address: string, func: (contra
 const sortByUnlockDay = sort<Stake>((st1, st2) => st1.unlockDay.diff(st2.unlockDay))
 
 const NetworkBadge: React.FC<{ chainId: number | undefined }> = ({ chainId }) => {
-  if (chainId == 1) {
+  if (chainId === 1) {
     return <Label color="blue" size="large">Ethereum</Label>
-  } else if (chainId == 369) {
+  } else if (chainId === 369) {
     return <Label color="blue" size="large">PulseChain</Label>
   } else {
     return <Label color="grey" size="large">Unknown network</Label>
