@@ -5,6 +5,7 @@ import { InjectedConnector } from '@web3-react/injected-connector'
 import * as HEX from './library/HEX';
 import * as UNISWAP_HEX from './library/UNISWAP_HEX';
 import * as MAKER_ETHUSD from './library/MAKER_ETHUSD';
+import * as PULSEX_HEXDAI from './library/PULSEX_HEXDAI';
 import moment from 'moment';
 import ical from 'ical-generator';
 import { sum, map, prop, flatten, sort, reject, equals, range } from 'ramda';
@@ -19,7 +20,10 @@ import 'semantic-ui-css/semantic.min.css'
 import BigNumber from 'bignumber.js';
 import { useCallbackWithInterval } from './interval';
 
-const injected = new InjectedConnector({ supportedChainIds: [1, 369] })
+const CHAINID_ETHEREUM = 1;
+const CHAINID_PULSECHAIN = 369;
+
+const injected = new InjectedConnector({ supportedChainIds: [CHAINID_ETHEREUM, CHAINID_PULSECHAIN] })
 const referalAddr = '0xFa2C0AbdaeDc8099887914Ab25AD11B3846655B9'
 const iCalDomain = 'coinyon.github.io'
 const iCalProdId = '//' + iCalDomain + '//HEXCAL//EN'
@@ -194,9 +198,9 @@ function useContract<T>(web3react: any, abi: any, address: string, func: (contra
 const sortByUnlockDay = sort<Stake>((st1, st2) => st1.unlockDay.diff(st2.unlockDay))
 
 const NetworkBadge: React.FC<{ chainId: number | undefined }> = ({ chainId }) => {
-  if (chainId === 1) {
+  if (chainId === CHAINID_ETHEREUM) {
     return <Label color="blue" size="large">Ethereum</Label>
-  } else if (chainId === 369) {
+  } else if (chainId === CHAINID_PULSECHAIN) {
     return <Label color="blue" size="large">PulseChain</Label>
   } else {
     return <Label color="grey" size="large">Unknown network</Label>
@@ -244,12 +248,29 @@ const App: React.FC = (_props) => {
     }, [], updateInterval)
   )
 
+  const [pHexPriceUsd] = useContract<number>(
+    web3react,
+    PULSEX_HEXDAI.abi,
+    PULSEX_HEXDAI.address,
+    useCallbackWithInterval(async (contract, library) => {
+      const reserves = await contract.methods.getReserves().call();
+      if (reserves) {
+        const token0 = reserves[0] / Math.pow(10, 8)
+        const token1 = reserves[1] / Math.pow(10, 18)
+        return token1 / token0
+      } else {
+        return 0
+      }
+    }, [], updateInterval)
+  )
+
   const [hexBalances] = useContract<HexBalance[]>(web3react, HEX.abi, HEX.address, React.useCallback(async (contract) => {
     const balances = await Promise.all(accounts.map((acc) => contract.methods.balanceOf(acc).call()))
     return balances.map((balance, index) => ({ address: accounts[index], balance }))
   }, [ accounts ]))
 
-  const hexPriceUsd = (hexPriceEth !== null && ethPriceUsd !== null) ? hexPriceEth * ethPriceUsd : null
+  const isPulseChain = web3react.chainId === CHAINID_PULSECHAIN;
+  const hexPriceUsd = isPulseChain ? pHexPriceUsd : ((hexPriceEth !== null && ethPriceUsd !== null) ? hexPriceEth * ethPriceUsd : null);
 
   //;(window as any).web3 = web3react.library
 
