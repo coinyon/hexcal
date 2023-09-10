@@ -488,7 +488,7 @@ Please donate if you found this useful.`
             <Button primary onClick={() => activate()}>
               Connect to Web3
             </Button>
-          {error ? "error" : null}
+          {error && JSON.stringify(error)}
           </Segment>
           </>: null }
         {(active && account) ?
